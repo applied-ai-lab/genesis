@@ -1,0 +1,3 @@
+https://shapestacks.robots.ox.ac.uk/static/download/v1/shapestacks-mjcf.tar.gz
+https://shapestacks.robots.ox.ac.uk/static/download/v1/shapestacks-meta.tar.gz
+https://shapestacks.robots.ox.ac.uk/static/download/v1/shapestacks-rgb.tar.gz
