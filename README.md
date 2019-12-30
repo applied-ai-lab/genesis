@@ -30,7 +30,7 @@ This repository contains data loaders for the three datasets considered in the [
 This order aligns with the increasing visual complexity of the datasets. A few steps are required for setting up each individual dataset.
 
 ### Multi-dSprites
-We have a script for generating Multi-dSprites. This is the smallest of the three datasets and allows for quick turnaround.
+Generate coloured Multi-dSprites from the original dSprites with:
 ```shell
 cd ~/code/genesis
 mkdir -p data/multi_dsprites/processed
@@ -39,20 +39,18 @@ python scripts/generate_multid.py
 ```
 
 ### GQN (rooms-ring-camera)
-The GQN dataset makes for very nice visualisations but it is very big. Make sure to have enough space on your disk - even rooms_ring_camera alone is about 250GB large!
-
-Note that we use a modified version of the TensorFlow GQN data loader from https://github.com/ogroth/tf-gqn which is itself adapted from https://github.com/deepmind/gqn-datasets.git. This is already included in `thirt_party/tf_gqn`.
-
-Download your dataset(s) of choice and put them into gqn_datasets. Here, we use `rooms_ring_camera` living in `data/gqn_datasets/rooms_ring_camera/train` and `data/gqn_datasets/rooms_ring_camera/test`. This can be done using the following commands. We are installing gsutil via pip which is very easy but requires Python 2.7. You can also install gsutil via other means as described on the official website.
+The GQN datasets are quite large. The `rooms_ring_camera` dataset as used in the paper takes about 250GB and can be downloaded with:
 ```shell
-pip2 install gsutil
+pip install gsutil
 cd ~/code/genesis
 mkdir -p data/gqn_datasets
-gsutil -m cp -r gs://gqn-dataset/rooms_ring_camera gqn_datasets
+gsutil -m cp -r gs://gqn-dataset/rooms_ring_camera data/gqn_datasets
 ```
 
+Note that we use a modified version of the TensorFlow GQN data loader from https://github.com/ogroth/tf-gqn which is based on https://github.com/deepmind/gqn-datasets.git and included in `third_party/tf_gqn`.
+
 ### ShapeStacks
-Finally, ShapeStacks is the most difficult dataset that we conducted experiments on. You will need about 30GB of free disk space.
+You need about 30GB of free disk space for ShapeStacks:
 ```shell
 cd ~/code/genesis
 mkdir -p data/shapestacks
