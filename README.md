@@ -18,7 +18,7 @@ echo 'export PYTHONPATH="${PYTHONPATH}:${HOME}/code/genesis/forge"' >> ~/.bashrc
 ### Python dependencies
 You can either install PyTorch, TensorFlow, and all other dependencies manually or you can setup up conda environment with all required dependencies using the `environment.yml` file:
 ```shell
-conda genesis_env create -f environment.yml
+conda env create -n genesis_env -f environment.yml
 ```
 
 ## Datasets
