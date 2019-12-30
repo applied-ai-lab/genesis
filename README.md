@@ -5,7 +5,7 @@ This is the official PyTorch implementation of ["GENESIS: Generative Scene Infer
 ## Setup
 Start by cloning the repository, e.g. into `~/code/genesis`:
 ```shell
-git clone --recursive git@github.com:applied-ai-lab/genesis.git ~/code/genesis
+git clone --recursive https://github.com/applied-ai-lab/genesis.git ~/code/genesis
 ```
 
 ### Forge
