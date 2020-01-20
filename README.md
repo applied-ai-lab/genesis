@@ -88,6 +88,9 @@ See `train.py` and the config files for the available flags.
 #### Monitoring training
 TensorBoard logs are written to file with [TensorboardX](https://github.com/lanpa/tensorboardX). Run `tensorboard --logdir checkpoints` to monitor training.
 
+### Pretrained models
+Models trained on the three datasets with the default flags are available [here](https://drive.google.com/drive/folders/1uLSV5eV6Iv4BYIyh0R9DUGJT2W6QPDkb?usp=sharing).
+
 ## Further particulars
 ### License
 This source code is licensed under a [GNU General Public License (GPL) v3](https://www.gnu.org/licenses/gpl-3.0.en.html) license, which is included in the [LICENSE](LICENSE) file in the root directory.
