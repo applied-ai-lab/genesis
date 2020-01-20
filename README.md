@@ -86,7 +86,7 @@ python train.py --data_config datasets/multid_config.py --model_config models/ge
 See `train.py` and the config files for the available flags.
 
 #### Monitoring training
-Forge writes TensorBoard logs to file. Run `tensorboard --logdir checkpoints` for monitoring training.
+TensorBoard logs are written to file with [TensorboardX](https://github.com/lanpa/tensorboardX). Run `tensorboard --logdir checkpoints` to monitor training.
 
 ## Further particulars
 ### License
