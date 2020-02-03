@@ -1,6 +1,6 @@
 # Genesis
 
-This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/).
+This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); accepted for publication at the International Conference on Learning Representations (ICLR) 2020.
 
 ## Setup
 Start by cloning the repository, e.g. into `~/code/genesis`:
@@ -108,8 +108,8 @@ If you use this repository in your research, please cite our paper:
 @article{engelcke2019genesis,
   title={{GENESIS: Generative Scene Inference and Sampling of Object-Centric Latent Representations}},
   author={Engelcke, Martin and Kosiorek, Adam R. and Parker Jones, Oiwi and Posner, Ingmar},
-  journal={arXiv preprint arXiv:1907.13052},
-  year={2019}
+  journal={Proceedings of the International Conference on Learning Representations (ICLR)},
+  year={2020}
 }
 ```
 
