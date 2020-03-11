@@ -66,8 +66,8 @@ class PixelCoords(nn.Module):
         super(PixelCoords, self).__init__()
         g_1, g_2 = torch.meshgrid(torch.linspace(-1, 1, im_dim),
                                   torch.linspace(-1, 1, im_dim))
-        self.register_buffer('g_1', g_1.view((1, 1) + g_1.shape))
-        self.register_buffer('g_2', g_2.view((1, 1) + g_2.shape))
+        self.g_1 = g_1.view((1, 1) + g_1.shape)
+        self.g_2 = g_2.view((1, 1) + g_2.shape)
     def forward(self, x):
         g_1 = self.g_1.expand(x.size(0), -1, -1, -1)
         g_2 = self.g_2.expand(x.size(0), -1, -1, -1)
