@@ -19,6 +19,14 @@ import torch.nn.functional as F
 def to_sigma(x):
     return F.softplus(x + 0.5) + 1e-8
 
+def to_prior_sigma(x, simgoid_bias=4.0, eps=1e-4):
+    """
+    This parameterisation bounds sigma of a learned prior to [eps, 1+eps].
+    The default sigmoid_bias of 4.0 initialises sigma to be close to 1.0.
+    The default eps prevents instability as sigma -> 0.
+    """
+    return torch.sigmoid(x + simgoid_bias) + eps
+
 def to_var(x):
     return to_sigma(x)**2
 
