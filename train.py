@@ -149,7 +149,10 @@ def main():
         fprint(f"Restoring checkpoint from {resume_checkpoint}")
         checkpoint = torch.load(resume_checkpoint, map_location='cpu')
         # Restore model & optimiser
-        model.load_state_dict(checkpoint['model_state_dict'])
+        model_state_dict = checkpoint['model_state_dict']
+        model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_1', None)
+        model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_2', None)
+        model.load_state_dict(model_state_dict)
         optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
         # Update GECO multipliers
         if config.geco and 'beta' in checkpoint:
