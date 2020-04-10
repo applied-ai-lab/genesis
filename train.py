@@ -31,6 +31,8 @@ from forge import flags
 import forge.experiment_tools as fet
 from forge.experiment_tools import fprint
 
+from scripts.compute_fid import fid_from_model
+
 
 # ELBO divergence threshold for stopping training
 ELBO_DIV = 1e8
@@ -373,6 +375,12 @@ def main():
     final_elbo = evaluation(
         eval_model, test_loader, None, config, iter_idx, N_eval=config.N_eval)
     fprint(f"TEST ELBO = {float(final_elbo)}")
+
+    # FID computation
+    try:
+        fid_from_model(model, test_loader, img_dir=osp.join('/tmp', logdir))
+    except NotImplementedError:
+        fprint("Sampling not implemented for this model.")
 
     # Close writer
     writer.close()

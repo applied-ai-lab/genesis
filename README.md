@@ -91,6 +91,9 @@ TensorBoard logs are written to file with [TensorboardX](https://github.com/lanp
 ### Pretrained models
 Models trained on the three datasets with the default flags are available [here](https://drive.google.com/drive/folders/1uLSV5eV6Iv4BYIyh0R9DUGJT2W6QPDkb?usp=sharing).
 
+### FID computation
+See `scripts/compute_fid.py`.
+
 ## Further particulars
 ### License
 This source code is licensed under a [GNU General Public License (GPL) v3](https://www.gnu.org/licenses/gpl-3.0.en.html) license, which is included in the [LICENSE](LICENSE) file in the root directory.
@@ -118,6 +121,7 @@ This repository builds upon code from the following third party repositories, wh
 - [tf-gqn](https://github.com/ogroth/tf-gqn) (Apache v2 license)
 - [shapestacks](https://github.com/ogroth/shapestacks) (GPL v3.0)
 - [sylvester-flows](https://github.com/riannevdberg/sylvester-flows) (MIT license)
+- [pytorch-fid](https://github.com/mseitzer/pytorch-fid) (Apache v2 license)
 
 The full licenses are included in the respective folders.
 
