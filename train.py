@@ -438,7 +438,9 @@ def evaluation(model, data_loader, writer, config, iter_idx, N_eval=None):
     model.eval()
 
     t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if N_eval is not None and N_eval <= len(data_loader)*data_loader.batch_size:
+    if iter_idx == 0 or config.debug:
+        num_batches = 1
+    elif N_eval is not None and N_eval <= len(data_loader)*data_loader.batch_size:
         num_batches = N_eval // data_loader.batch_size
         fprint(t + f" | Evaluating only on first {N_eval} examples in loader")
     else:
@@ -465,31 +467,28 @@ def evaluation(model, data_loader, writer, config, iter_idx, N_eval=None):
 
             _, losses, stats, _, _ = model(batch['input'])
 
-            err += float(losses.err.mean(0)) / num_batches
+            new_err = losses.err.mean(0)
+            err += float(new_err) / num_batches
             # Parse different loss types
             if 'kl_m' in losses:
-                kl_m = losses.kl_m.mean(0)
-                kl_m += float(kl_m) / num_batches
+                new_kl_m = losses.kl_m.mean(0)
+                kl_m += float(new_kl_m) / num_batches
             elif 'kl_m_k' in losses:
-                kl_m = torch.stack(losses.kl_m_k, dim=1).mean(dim=0).sum()
-                kl_m += float(kl_m) / num_batches
+                new_kl_m = torch.stack(losses.kl_m_k, dim=1).sum(1).mean(0)
+                kl_m += float(new_kl_m) / num_batches
             if 'kl_l' in losses:
-                kl_l = losses.kl_l.mean(0)
-                kl_l += float(kl_l) / num_batches
+                new_kl_l = losses.kl_l.mean(0)
+                kl_l += float(new_kl_l) / num_batches
             elif 'kl_l_k' in losses:
-                kl_l = torch.stack(losses.kl_l_k, dim=1).mean(dim=0).sum()
-                kl_l += float(kl_l) / num_batches
+                new_kl_l = torch.stack(losses.kl_l_k, dim=1).sum(1).mean(0)
+                kl_l += float(new_kl_l) / num_batches
             # Update ELBO
             if 'elbo' not in losses:
                 # Assign current "estimate"
-                elbo = err + kl_l + kl_m
+                elbo += float(new_err + new_kl_l + new_kl_m) / num_batches
             else:
                 # Add over steps
                 elbo += float(losses.elbo.mean(0)) / num_batches
-
-            # Break after one iteration if debugging
-            if config.debug:
-                break
 
     # Printing
     duration = time.time() - start_t
