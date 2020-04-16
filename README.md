@@ -93,8 +93,8 @@ TensorBoard logs are written to file with [TensorboardX](https://github.com/lanp
 ### Pretrained models
 Models trained on the three datasets with the default flags are available [here](https://drive.google.com/drive/folders/1uLSV5eV6Iv4BYIyh0R9DUGJT2W6QPDkb?usp=sharing).
 
-### FID computation
-See `scripts/compute_fid.py`.
+### Evaluation metrics
+See `scripts/compute_fid.py` and `scripts/compute_seg_metrics.py`.
 
 ## Further particulars
 ### License
