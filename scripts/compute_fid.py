@@ -42,7 +42,7 @@ def main_flags():
                         'Path to a data config file.')
     flags.DEFINE_string('model_config', 'models/genesis_config.py',
                         'Path to a model config file.')
-    # Pre-trained model
+    # Trained model
     flags.DEFINE_string('model_dir', 'checkpoints/test/1',
                         'Path to model directory.')
     flags.DEFINE_string('model_file', 'model.ckpt-FINAL', 'Name of model file.')

@@ -28,6 +28,8 @@ from utils.misc import loader_throughput
 flags.DEFINE_string('data_folder', 'data/multi_dsprites/processed',
                     'Path to data folder.')
 
+flags.DEFINE_boolean('load_instances', False, 'Load instances.')
+
 flags.DEFINE_integer('img_size', 64,
                      'Dimension of images. Images are square.')
 flags.DEFINE_integer('num_workers', 4,
@@ -57,6 +59,7 @@ def load(cfg, **unused_kwargs):
 
     # Training
     train_dataset = dSpritesDataset(os.path.join(cfg.data_folder, train_path),
+                                    cfg.load_instances,
                                     cfg.img_size,
                                     cfg.mem_map)
     train_loader = DataLoader(train_dataset,
@@ -65,6 +68,7 @@ def load(cfg, **unused_kwargs):
                               num_workers=cfg.num_workers)
     # Validation
     val_dataset = dSpritesDataset(os.path.join(cfg.data_folder, val_path),
+                                  cfg.load_instances,
                                   cfg.img_size,
                                   cfg.mem_map)
     val_loader = DataLoader(val_dataset,
@@ -73,6 +77,7 @@ def load(cfg, **unused_kwargs):
                             num_workers=cfg.num_workers)
     # Test
     test_dataset = dSpritesDataset(os.path.join(cfg.data_folder, test_path),
+                                   cfg.load_instances,
                                    cfg.img_size,
                                    cfg.mem_map)
     test_loader = DataLoader(test_dataset,
@@ -89,7 +94,8 @@ def load(cfg, **unused_kwargs):
 class dSpritesDataset(Dataset):
     """dSprites dataset."""
 
-    def __init__(self, file_path, img_size=64, mem_map=False):
+    def __init__(self, file_path, load_instances=True,
+                 img_size=64, mem_map=False):
         """
         Args:
             file_path (string): Path to the npy file of dSprites dataset.
@@ -100,6 +106,14 @@ class dSpritesDataset(Dataset):
         else:
             self.all_images = np.load(file_path)
         self.to_tensor = transforms.ToTensor()
+        if load_instances and mem_map:
+            self.all_instance_masks = np.load(
+                file_path.replace('images', 'masks'), mmap_mode='r')
+        elif load_instances:
+            self.all_instance_masks = np.load(
+                file_path.replace('images', 'masks'))
+        else:
+            self.all_instance_masks = None
         self.img_size = img_size
 
     def __len__(self):
@@ -110,4 +124,12 @@ class dSpritesDataset(Dataset):
         img = self.to_tensor(img)
         if self.img_size != 64:
             img = F.interpolate(img.unsqueeze(0), size=self.img_size).squeeze(0)
-        return {'input': img}
+        output = {'input': img}
+        if self.all_instance_masks is not None:
+            ins = self.all_instance_masks[idx]
+            ins = self.to_tensor(ins)
+            if self.img_size != 64:
+                ins = F.interpolate(
+                    ins.unsqueeze(0), size=self.img_size).squeeze(0)
+            output['instances'] = ins.type(torch.LongTensor)
+        return output

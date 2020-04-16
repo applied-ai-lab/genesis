@@ -15,6 +15,7 @@ import os
 from shutil import copytree
 
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
@@ -24,9 +25,10 @@ from PIL import Image
 from forge import flags
 from forge.experiment_tools import fprint
 
-from utils.misc import loader_throughput
+from utils.misc import loader_throughput, np_img_centre_crop
 
 from third_party.shapestacks.shapestacks_provider import _get_filenames_with_labels
+from third_party.shapestacks.segmentation_utils import load_segmap_as_matrix
 
 
 flags.DEFINE_string('data_folder', 'data/shapestacks', 'Path to data folder.')
@@ -35,6 +37,7 @@ flags.DEFINE_integer('img_size', 64, 'Dimension of images. Images are square.')
 flags.DEFINE_boolean('shuffle_test', False, 'Shuffle test set.')
 
 flags.DEFINE_integer('num_workers', 4, 'Number of threads for loading data.')
+flags.DEFINE_boolean('load_instances', False, 'Load instances.')
 flags.DEFINE_boolean('copy_to_tmp', False, 'Copy files to /tmp.')
 
 flags.DEFINE_integer('K_steps', 9, 'Number of recurrent steps.')
@@ -52,7 +55,7 @@ def load(cfg, **unused_kwargs):
 
     # Copy all images and splits to /tmp
     if cfg.copy_to_tmp:
-        for directory in ['/recordings', '/splits']:
+        for directory in ['/recordings', '/splits', '/iseg']:
             src = cfg.data_folder + directory
             dst = '/tmp' + directory
             fprint(f"Copying dataset from {src} to {dst}.")
@@ -63,7 +66,8 @@ def load(cfg, **unused_kwargs):
     tng_set = ShapeStacksDataset(cfg.data_folder,
                                  cfg.split_name,
                                  'train',
-                                 cfg.img_size)
+                                 cfg.img_size,
+                                 cfg.load_instances)
     tng_loader = DataLoader(tng_set,
                             batch_size=cfg.batch_size,
                             shuffle=True,
@@ -72,7 +76,8 @@ def load(cfg, **unused_kwargs):
     val_set = ShapeStacksDataset(cfg.data_folder,
                                  cfg.split_name,
                                  'eval',
-                                 cfg.img_size)
+                                 cfg.img_size,
+                                 cfg.load_instances)
     val_loader = DataLoader(val_set,
                             batch_size=cfg.batch_size,
                             shuffle=False,
@@ -82,6 +87,7 @@ def load(cfg, **unused_kwargs):
                                  cfg.split_name,
                                  'test',
                                  cfg.img_size,
+                                 cfg.load_instances,
                                  shuffle_files=cfg.shuffle_test)
     tst_loader = DataLoader(tst_set,
                             batch_size=1,
@@ -97,9 +103,10 @@ def load(cfg, **unused_kwargs):
 class ShapeStacksDataset(Dataset):
 
     def __init__(self, data_dir, split_name, mode, img_size=224,
-                 shuffle_files=False):
+                 load_instances=True, shuffle_files=False):
         self.data_dir = data_dir
         self.img_size = img_size
+        self.load_instances = load_instances
 
         # Files
         split_dir = os.path.join(data_dir, 'splits', split_name)
@@ -131,4 +138,23 @@ class ShapeStacksDataset(Dataset):
         # rgb-w=5-f=2-l=1-c=unique-cam_7-mono-0.png
         file = self.filenames[idx]
         img = Image.open(file)
-        return {'input': self.transform(img)}
+        output = {'input': self.transform(img)}
+
+        # --- Load instances ---
+        if self.load_instances:
+            file_split = file.split('/')
+            cam = file_split[4].split('-')[5][4:]
+            map_path = os.path.join(
+                self.data_dir, 'iseg', file_split[3],
+                'iseg-w=0-f=0-l=0-c=original-cam_' + cam + '-mono-0.map')
+            masks = load_segmap_as_matrix(map_path)
+            masks = np.expand_dims(masks, 0)
+            masks = np_img_centre_crop(masks, CENTRE_CROP)
+            masks = torch.FloatTensor(masks)
+            if self.img_size != masks.shape[2]:
+                masks = masks.unsqueeze(0)
+                masks = F.interpolate(masks, size=self.img_size)
+                masks = masks.squeeze(0)
+            output['instances'] = masks.type(torch.LongTensor)
+
+        return output
