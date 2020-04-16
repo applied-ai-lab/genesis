@@ -63,6 +63,8 @@ wget -i shapestacks_urls.txt
 bash ../../utils/uncompress_shapestacks.sh
 ```
 
+The instance segmentation labels for ShapeStacks can be downloaded from [here](https://drive.google.com/open?id=1KsSQCgb1JJExbKyrIkTwBL9VidGcq2k7).
+
 ## Experiments
 ### Visualising data
 You can visualise your data with, e.g.:
