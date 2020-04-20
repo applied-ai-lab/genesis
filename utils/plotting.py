@@ -18,7 +18,8 @@ from matplotlib.colors import NoNorm
 def convert_to_np_im(torch_tensor, batch_idx=0):
     return np.moveaxis(torch_tensor.data.numpy()[batch_idx], 0, -1)
 
-def plot(axes, ax1, ax2, tensor=None, title=None, grey=False, axis=False):
+def plot(axes, ax1, ax2, tensor=None, title=None, grey=False, axis=False,
+         fontsize=4):
     if tensor is not None:
         im = convert_to_np_im(tensor)
         if grey:
@@ -32,5 +33,5 @@ def plot(axes, ax1, ax2, tensor=None, title=None, grey=False, axis=False):
         axes[ax1, ax2].set_xticks([])
         axes[ax1, ax2].set_yticks([])
     if title is not None:
-        axes[ax1, ax2].set_title(title, fontsize=4)
+        axes[ax1, ax2].set_title(title, fontsize=fontsize)
     # axes[ax1, ax2].set_aspect('equal')

@@ -96,6 +96,9 @@ Models trained on the three datasets with the default flags are available [here]
 ### Evaluation metrics
 See `scripts/compute_fid.py` and `scripts/compute_seg_metrics.py`.
 
+### Visualise generation
+See `scripts/visualise_generation.py`.
+
 ## Further particulars
 ### License
 This source code is licensed under a [GNU General Public License (GPL) v3](https://www.gnu.org/licenses/gpl-3.0.en.html) license, which is included in the [LICENSE](LICENSE) file in the root directory.
