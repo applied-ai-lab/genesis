@@ -11,22 +11,15 @@
 #
 # =========================== A2I Copyright Header ===========================
 
-import sys
 import os
 from os import path as osp
 import random
-import time
-import datetime
-
 from attrdict import AttrDict
+from tqdm import tqdm
 
 import torch
-from torch.utils.data.dataset import TensorDataset
-
 import numpy as np
 from PIL import Image
-
-from tqdm import tqdm
 
 import forge
 from forge import flags
@@ -112,8 +105,7 @@ def fid_from_model(model, test_loader, batch_size=10, num_images=10000,
     model.eval()
 
     # Save images from test set as pngs
-    t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    fprint(t + " | Saving images from test set as pngs.")
+    fprint("Saving images from test set as pngs.", True)
     test_dir = osp.join(img_dir, 'test_images')
     os.makedirs(test_dir)
     count = 0
@@ -123,8 +115,7 @@ def fid_from_model(model, test_loader, batch_size=10, num_images=10000,
             break
 
     # Generate images and save as pngs
-    t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    fprint(t + " | Generate images and save as pngs.")
+    fprint("Generate images and save as pngs.", True)
     gen_dir = osp.join(img_dir, 'generated_images')
     os.makedirs(gen_dir)
     count = 0
@@ -136,13 +127,11 @@ def fid_from_model(model, test_loader, batch_size=10, num_images=10000,
         count = tensor_to_png(gen_img, gen_dir, count, num_images)
 
     # Compute FID
-    t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    fprint(t + " | Computing FID.")
+    fprint("Computing FID.", True)
     gpu = next(model.parameters()).is_cuda
     fid_value = FID.calculate_fid_given_paths(
         [test_dir, gen_dir], batch_size, gpu, feat_dim)
-    t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    fprint(t + f" | FID: {fid_value}")
+    fprint(f"FID: {fid_value}", True)
 
     model.train()
 
