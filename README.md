@@ -96,8 +96,8 @@ Models trained on the three datasets with the default flags are available [here]
 ### Evaluation metrics
 See `scripts/compute_fid.py` and `scripts/compute_seg_metrics.py`.
 
-### Visualise generation
-See `scripts/visualise_generation.py`.
+### Visualise reconstruction & generation
+See `scripts/visualise_reconstruction.py` and `scripts/visualise_generation.py`.
 
 ## Further particulars
 ### License
