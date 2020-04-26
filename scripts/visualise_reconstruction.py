@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # =========================== A2I Copyright Header ===========================
 #
 # Copyright (c) 2003-2019 University of Oxford. All rights reserved.
@@ -31,33 +29,27 @@ from utils.plotting import plot
 
 
 # Data & model config
-flags.DEFINE_string('data_config', 'datasets/multid_config.py',
+flags.DEFINE_string('data_config', 'datasets/gqn_config.py',
                     'Path to a data config file.')
 flags.DEFINE_string('model_config', 'models/genesis_config.py',
                     'Path to a model config file.')
 # Trained model
-flags.DEFINE_string('model_dir', 'checkpoints/pretrained_multid',
+flags.DEFINE_string('model_dir', 'checkpoints/test/1',
                     'Path to model directory.')
-flags.DEFINE_string('model_file', 'multid_model.ckpt', 'Name of model file.')
-
-# Visualize_generation
-flags.DEFINE_integer('num_inputs', 10,
-                        'Number of inputs to visualize.')
-# Don't change this
-flags.DEFINE_integer('batch_size', 1, 'Mini-batch size.')
+flags.DEFINE_string('model_file', 'model.ckpt-FINAL', 'Name of model file.')
+# Other
+flags.DEFINE_integer('num_images', 10, 'Number of images to visualize.')
 
 
 def main():
     # Parse flags
     config = forge.config()
+    fet.print_flags()
     # Restore flags of pretrained model
     flag_path = osp.join(config.model_dir, 'flags.json')
     fprint(f"Restoring flags from {flag_path}")
     pretrained_flags = AttrDict(fet.json_load(flag_path))
-    pretrained_flags.batch_size = 1
-    pretrained_flags.gpu = False
     pretrained_flags.debug = True
-    fet.print_flags()
 
     # Fix seeds. Always first thing to be done after parsing the config!
     torch.manual_seed(0)
@@ -68,6 +60,7 @@ def main():
     torch.backends.cudnn.benchmark = False
 
     # Load data
+    config.batch_size = 1
     _, _, test_loader = fet.load(config.data_config, config)
 
     # Load model
@@ -83,35 +76,27 @@ def main():
 
     # Visualise
     model.eval()
-
-    # note that the batch size should be 1
     for count, batch in enumerate(test_loader):
-        if count >= config.num_inputs:
+        if count >= config.num_images:
             break
 
-        cur_image_input = batch['input']
-
-        # passing in input
-        output, _, stats, _, _ = model(cur_image_input)
-
-        # setting up figure
+        # Forward pass
+        output, _, stats, _, _ = model(batch['input'])
+        # Set up figure
         fig, axes = plt.subplots(nrows=4, ncols=1+pretrained_flags.K_steps)     
 
-        # input
-        plot(axes, 0, 0, cur_image_input, title='Input image', fontsize=12)
-        # generated
-        plot(axes, 1, 0, output, title='Generated scene', fontsize=12)
-        # empty plots
+        # Input and reconstruction
+        plot(axes, 0, 0, batch['input'], title='Input image', fontsize=12)
+        plot(axes, 1, 0, output, title='Reconstruction', fontsize=12)
+        # Empty plots
         plot(axes, 2, 0, fontsize=12)
         plot(axes, 3, 0, fontsize=12)
         
-        # the components
+        # Put K reconstruction steps into separate subfigures
         x_k = stats['x_r_k']
         log_m_k = stats['log_m_k']
         mx_k = [x*m.exp() for x, m in zip(x_k, log_m_k)]
         log_s_k = stats['log_s_k'] if 'log_s_k' in stats else None
-
-        # Put K generation steps in separate subfigures
         for step in range(pretrained_flags.K_steps):
             mx_step = mx_k[step]
             x_step = x_k[step]
@@ -133,7 +118,7 @@ def main():
         # Beautify and show figure
         plt.subplots_adjust(wspace=0.05, hspace=0.15)
         manager = plt.get_current_fig_manager()
-        manager.window.showMaximized()  # for Qt backend
+        manager.resize(*manager.window.maxsize())
         plt.show()
 
 
