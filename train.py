@@ -31,6 +31,7 @@ from forge import flags
 import forge.experiment_tools as fet
 from forge.experiment_tools import fprint
 
+from utils.geco import GECO
 from scripts.compute_fid import fid_from_model
 
 
@@ -72,11 +73,12 @@ def main_flags():
     flags.DEFINE_float('beta', 0.5, 'KL weighting.')
     flags.DEFINE_boolean('beta_warmup', True, 'Warm up beta.')
     flags.DEFINE_boolean('geco', True, 'Use GECO objective.')
-    flags.DEFINE_float('g_init', 1.0, 'GECO inital Lagrange factor.')
-    flags.DEFINE_float('g_alpha', 0.99, 'GECO momentum for error.')
-    flags.DEFINE_float('g_lr', 1e-5, 'GECO learning rate.')
-    flags.DEFINE_float('g_speedup', 10., 'Scale GECO lr if delta positive.')
     flags.DEFINE_float('g_goal', 0.5655, 'GECO recon goal.')
+    flags.DEFINE_float('g_lr', 1e-5, 'GECO learning rate.')
+    flags.DEFINE_float('g_alpha', 0.99, 'GECO momentum for error.')
+    flags.DEFINE_float('g_init', 1.0, 'GECO inital Lagrange factor.')
+    flags.DEFINE_float('g_min', 1e-10, 'GECO min Lagrange factor.')
+    flags.DEFINE_float('g_speedup', 10., 'Scale GECO lr if delta positive.')
     # Other
     flags.DEFINE_boolean('gpu', True, 'Use GPU if available.')
     flags.DEFINE_boolean('multi_gpu', False, 'Use multiple GPUs if available.')
@@ -131,11 +133,22 @@ def main():
 
     # Load data
     train_loader, val_loader, test_loader = fet.load(config.data_config, config)
+    num_elements = 3 * config.img_size**2  # Assume three input channels
 
     # Load model
     model = fet.load(config.model_config, config)
-    beta = torch.tensor(config.g_init) if config.geco else config.beta
     fprint(model)
+    if config.geco:
+        # Goal is specified per pixel & channel so it doesn't need to
+        # be changed for different resolutions etc.
+        geco_goal = config.g_goal * num_elements
+        # Scale step size to get similar update at different resolutions
+        geco_lr = config.g_lr * (64**2 / config.img_size**2)
+        geco = GECO(geco_goal, geco_lr, config.g_alpha, config.g_init,
+                    config.g_min, config.g_speedup)
+        beta = geco.beta
+    else:
+        beta = torch.tensor(config.beta)
 
     # Setup optimiser
     if config.optimiser == 'rmsprop':
@@ -156,12 +169,12 @@ def main():
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_2', None)
         model.load_state_dict(model_state_dict)
         optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-        # Update GECO multipliers
+        # Restore GECO
         if config.geco and 'beta' in checkpoint:
-            beta = checkpoint['beta']
-            if config.gpu:
-                beta = beta.cuda()
-        # Update starting iteration
+            geco.beta = checkpoint['beta']
+        if config.geco and 'err_ema' in checkpoint:
+            geco.err_ema = checkpoint['err_ema']
+        # Update starting iter
         iter_idx = checkpoint['iter_idx'] + 1
     fprint(f"Starting training at iter = {iter_idx}")
 
@@ -172,6 +185,8 @@ def main():
     if config.gpu:
         fprint("Pushing model to GPU.")
         model = model.cuda()
+        if config.geco:
+            geco.to_cuda()
 
     # ------------------------
     # TRAINING
@@ -179,7 +194,6 @@ def main():
 
     model.train()
     timer = time.time()
-    err_ema, kl_ema = None, None
     while iter_idx <= config.train_iter:
         for train_batch in train_loader:
             # Parse data
@@ -210,32 +224,19 @@ def main():
             elbo = (err + kl_l + kl_m).detach()
             err_new = err.detach()
             kl_new = (kl_m + kl_l).detach()
-            # Update moving averages
-            err_ema = get_ema(err_new, err_ema, config.g_alpha)
-            kl_ema = get_ema(kl_new, kl_ema, config.g_alpha)
             # Compute MSE / RMSE
             mse_batched = ((train_input-output)**2).mean((1, 2, 3)).detach()
             rmse_batched = mse_batched.sqrt()
             mse, rmse = mse_batched.mean(0), rmse_batched.mean(0)
 
             # Main objective
-            input_shape = train_input.shape
-            num_pixels = input_shape[1] * input_shape[2] * input_shape[3]
             if config.geco:
-                loss = err + beta*(kl_l + kl_m)
-                # Goal is specified per pixel & channel so it doesn't need to
-                # be changed for different resolutions etc.
-                goal = config.g_goal * num_pixels
-                # Hack: scale step size to get roughly similar update magnitudes
-                # for different resolutions
-                g_lr = config.g_lr * 64**2 / config.img_size**2
-                # Update beta
-                beta = geco_beta_update(beta, err_ema, goal, g_lr,
-                                        speedup=config.g_speedup)
+                loss = geco.loss(err, kl_l + kl_m)
+                beta = geco.beta
             else:
                 if config.beta_warmup:
-                    # Increase beta linearly over first 20% of training
-                    beta =  config.beta*iter_idx / (0.2*config.train_iter)
+                    # Increase beta linearly over 20% of training
+                    beta = config.beta*iter_idx / (0.2*config.train_iter)
                     beta = torch.tensor(beta).clamp(0, config.beta)
                 else:
                     beta = config.beta
@@ -253,12 +254,10 @@ def main():
                 ps += f' {config.run_name} | '
                 ps += f'[{iter_idx}/{config.train_iter:.0e}]'
                 ps += f' elb: {float(elbo):.0f} err: {float(err):.0f} '
-                ps += f' ema: {float(err_ema):.0f}'
                 if 'kl_m' in losses or 'kl_m_k' in losses:
                     ps += f' klm: {float(kl_m):.1f}'
                 if 'kl_l' in losses or 'kl_l_k' in losses:
                     ps += f' kll: {float(kl_l):.1f}'
-                ps += f' kle: {float(kl_ema):.1f}'
                 ps += f' bet: {float(beta):.1e}'
                 s_per_b = (time.time()-timer)
                 if not config.debug:
@@ -270,19 +269,21 @@ def main():
                 # TensorBoard logging
                 # -- Optimisation stats
                 writer.add_scalar('optim/beta', beta, iter_idx)
+                writer.add_scalar('optim/s_per_batch', s_per_b, iter_idx)
+                if config.geco:
+                    writer.add_scalar('optim/geco_err_ema',
+                                      geco.err_ema, iter_idx)
+                    writer.add_scalar('optim/geco_err_ema_element',
+                                      geco.err_ema/num_elements, iter_idx)
                 # -- Main loss terms
                 writer.add_scalar('train/err', err, iter_idx)
+                writer.add_scalar('train/err_element', err/num_elements, iter_idx)
                 writer.add_scalar('train/kl_m', kl_m, iter_idx)
                 writer.add_scalar('train/kl_l', kl_l, iter_idx)
                 writer.add_scalar('train/elbo', elbo, iter_idx)
                 writer.add_scalar('train/loss', loss, iter_idx)
                 writer.add_scalar('train/mse', mse, iter_idx)
                 writer.add_scalar('train/rmse', rmse, iter_idx)
-                writer.add_scalar('train/err_ema', err_ema, iter_idx)
-                writer.add_scalar('train/kl_ema', kl_ema, iter_idx)
-                writer.add_scalar('train/err_pixel', err / num_pixels, iter_idx)
-                writer.add_scalar('train/err_ema_pixel', err_ema / num_pixels, iter_idx)
-                writer.add_scalar('train/s_per_batch', s_per_b, iter_idx)
                 # -- Per step loss terms
                 for key in ['kl_l_k', 'kl_m_k']:
                     if key not in losses: continue
@@ -318,7 +319,8 @@ def main():
                              'optimiser_state_dict': optimiser.state_dict(),
                              'elbo': elbo}
                 if config.geco:
-                    ckpt_dict['beta'] = beta
+                    ckpt_dict['beta'] = geco.beta
+                    ckpt_dict['err_ema'] = geco.err_ema
                 torch.save(ckpt_dict, ckpt_file)
 
             # Run validation and log images
@@ -366,7 +368,8 @@ def main():
                  'model_state_dict': model_state_dict,
                  'optimiser_state_dict': optimiser.state_dict()}
     if config.geco:
-        ckpt_dict['beta'] = beta
+        ckpt_dict['beta'] = geco.beta
+        ckpt_dict['err_ema'] = geco.err_ema
     torch.save(ckpt_dict, ckpt_file)
 
     # Test evaluation
@@ -384,30 +387,6 @@ def main():
 
     # Close writer
     writer.close()
-
-
-def get_ema(new, old, alpha):
-    if old is None:
-        return new
-    return (1.0 - alpha) * new + alpha * old
-
-
-def geco_beta_update(beta, error_ema, goal, step_size,
-                     min_clamp=1e-10, speedup=None):
-    # Compute current constraint value and detach because we do not want to
-    # back-propagate through error_ema
-    constraint = (goal - error_ema).detach()
-    # Update beta
-    if speedup is not None and constraint.item() > 0.0:
-        # Apply a speedup factor to recover more quickly from undershooting
-        beta = beta * torch.exp(speedup * step_size * constraint)
-    else:
-        beta = beta * torch.exp(step_size * constraint)
-    # Clamp beta to be larger than minimum value
-    if min_clamp is not None:
-        beta = torch.max(beta, torch.tensor(min_clamp))
-    # Detach again just to be safe
-    return beta.detach()
 
 
 def visualise_inference(model, vis_batch, writer, mode, iter_idx):
