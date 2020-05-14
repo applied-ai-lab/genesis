@@ -74,8 +74,7 @@ def main():
     fet.print_flags()
 
     # Load data
-    if config.compute_fid:
-        _, _, test_loader = fet.load(config.data_config, config)
+    _, _, test_loader = fet.load(config.data_config, config)
 
     #  Load model
     flag_path = osp.join(config.model_dir, 'flags.json')
