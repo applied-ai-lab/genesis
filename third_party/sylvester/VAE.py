@@ -55,15 +55,21 @@ class VAE(nn.Module):
 
         if self.input_size[1] == 32 and self.input_size[2] == 32:
             self.last_kernel_size = 8
+            strides = [1, 2, 1, 2, 1]
         elif self.input_size[1] == 64 and self.input_size[2] == 64:
             self.last_kernel_size = 16
+            strides = [1, 2, 1, 2, 1]
+        elif self.input_size[1] == 128 and self.input_size[2] == 128:
+            self.last_kernel_size = 16
+            strides = [2, 2, 2, 1, 1]
+        elif self.input_size[1] == 256 and self.input_size[2] == 256:
+            self.last_kernel_size = 16
+            strides = [2, 2, 2, 2, 1]
         else:
             raise ValueError('Invalid input size.')
 
         self.q_z_nn_output_dim = 256
 
-        # Configure encoder and decoder strides (reverse for decoder)
-        strides = [1, 2, 1, 2, 1]
         # Build encoder
         cin =  [self.input_size[0], 32, 32, 64, 64]
         cout = [32,                 32, 64, 64, 64]
