@@ -88,8 +88,7 @@ class Genesis(nn.Module):
         # - Component VAE
         if self.two_stage:
             self.comp_vae = ComponentVAE(
-                nout=input_channels, cfg=cfg, act=nn.ELU(),
-                deconv_layers=cfg.img_size//128 if cfg.img_size >= 128 else 0)
+                nout=input_channels, cfg=cfg, act=nn.ELU())
         else:
             self.decoder = decoders.BroadcastDecoder(
                 in_chnls=self.ldim, out_chnls=input_channels,

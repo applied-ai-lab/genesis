@@ -26,7 +26,7 @@ from modules.decoders import BroadcastDecoder
 
 class ComponentVAE(nn.Module):
 
-    def __init__(self, nout, cfg, act, deconv_layers=0):
+    def __init__(self, nout, cfg, act):
         super(ComponentVAE, self).__init__()
         self.ldim = cfg.comp_ldim  # paper uses 16
         self.montecarlo = cfg.montecarlo_kl
