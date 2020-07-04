@@ -113,7 +113,7 @@ No warranty, explicit or implicit, provided.
 ### Citation
 If you use this repository in your research, please cite our paper:
 ```
-@article{engelcke2019genesis,
+@article{engelcke2020genesis,
   title={{GENESIS: Generative Scene Inference and Sampling of Object-Centric Latent Representations}},
   author={Engelcke, Martin and Kosiorek, Adam R. and Parker Jones, Oiwi and Posner, Ingmar},
   journal={Proceedings of the International Conference on Learning Representations (ICLR)},
