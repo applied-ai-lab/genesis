@@ -1,6 +1,6 @@
 # =========================== A2I Copyright Header ===========================
 #
-# Copyright (c) 2003-2019 University of Oxford. All rights reserved.
+# Copyright (c) 2003-2020 University of Oxford. All rights reserved.
 # Authors: Applied AI Lab, Oxford Robotics Institute, University of Oxford
 #          https://ori.ox.ac.uk/labs/a2i/
 #
