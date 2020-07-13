@@ -27,6 +27,20 @@ from sklearn.metrics import adjusted_rand_score
 from forge.experiment_tools import fprint
 
 
+def len_tfrecords(dataset, sess):
+    iterator = dataset.make_one_shot_iterator()
+    frame = iterator.get_next()
+    total_sz = 0
+    while True:
+        try:
+            _ = sess.run(frame)
+            total_sz += 1
+            if total_sz % 1000 == 0:
+                print(total_sz)
+        except tf.errors.OutOfRangeError:
+            return total_sz
+
+
 def np_img_centre_crop(np_img, crop_dim, batch=False):
     # np_img: [c, dim1, dim2] if batch == False else [batch_sz, c, dim1, dim2]
     shape = np_img.shape

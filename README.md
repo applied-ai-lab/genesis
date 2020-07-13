@@ -1,6 +1,8 @@
 # Genesis
 
-This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); accepted for publication at the International Conference on Learning Representations (ICLR) 2020.
+This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); published at the International Conference on Learning Representations (ICLR) 2020.
+
+This implementation is also used in ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); Workshop on Object-Oriented Learning at ICML 2020.
 
 ## Setup
 Start by cloning the repository, e.g. into `~/code/genesis`:
@@ -65,6 +67,11 @@ bash ../../utils/uncompress_shapestacks.sh
 
 The instance segmentation labels for ShapeStacks can be downloaded from [here](https://drive.google.com/open?id=1KsSQCgb1JJExbKyrIkTwBL9VidGcq2k7).
 
+### Multi-Object Datasets
+The repository contains a wrapper around the ["Multi-Object Datasets](https://github.com/deepmind/multi-object-datasets/), returning an iterable which behaves similarly to a PyTorch DataLoader object.
+This is used for the experiments on the `Objects Room` dataset in the ICML workshop paper.
+The default config assumes that any datasets you wish to use have been downloaded to `data/multi-object-datasets`.
+
 ## Experiments
 ### Visualising data
 You can visualise your data with, e.g.:
@@ -72,6 +79,7 @@ You can visualise your data with, e.g.:
 python scripts/visualise_data.py --data_config datasets/multid_config.py
 python scripts/visualise_data.py --data_config datasets/gqn_config.py
 python scripts/visualise_data.py --data_config datasets/shapestacks_config.py
+python scripts/visualise_data.py --data_config datasets/multi_object_config.py --dataset objects_room
 ```
 
 ### Training models
@@ -111,7 +119,7 @@ Authors: Applied AI Lab, Oxford Robotics Institute, University of Oxford, https:
 No warranty, explicit or implicit, provided.
 
 ### Citation
-If you use this repository in your research, please cite our paper:
+If you use this repository in your research, please cite our ICLR paper:
 ```
 @article{engelcke2020genesis,
   title={{GENESIS: Generative Scene Inference and Sampling of Object-Centric Latent Representations}},
@@ -127,8 +135,11 @@ This repository builds upon code from the following third party repositories, wh
 - [shapestacks](https://github.com/ogroth/shapestacks) (GPL v3.0)
 - [sylvester-flows](https://github.com/riannevdberg/sylvester-flows) (MIT license)
 - [pytorch-fid](https://github.com/mseitzer/pytorch-fid) (Apache v2 license)
+- [multi_object_datasets](https://github.com/deepmind/multi_object_datasets) (Apache v2 license)
 
 The full licenses are included in the respective folders.
 
-### Release notes
-**v1.0**: First release.
+### Contributions
+
+We welcome contributions via pull requests.
+Otherwise, please let us know if you come across any issues.

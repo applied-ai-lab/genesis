@@ -24,7 +24,7 @@ import modules.seq_att as seq_att
 import modules.decoders as decoders
 from modules.component_vae import ComponentVAE
 
-from third_party.sylvester.VAE import VAE
+import third_party.sylvester.VAE as sylvester
 
 import utils.misc as misc
 
@@ -43,6 +43,8 @@ flags.DEFINE_integer('comp_enc_channels', 32, 'Starting number of channels.')
 flags.DEFINE_integer('comp_ldim', 16, 'Latent dimension of the VAE.')
 flags.DEFINE_integer('comp_dec_channels', 32, 'Num channels in Broadcast Decoder.')
 flags.DEFINE_integer('comp_dec_layers', 4, 'Num layers in Broadcast Decoder.')
+flags.DEFINE_boolean('comp_symmetric', False,
+                     'Use same encoder/decoder as in attention VAE.')
 # Losses
 flags.DEFINE_boolean('pixel_bound', True, 'Bound pixel values to [0, 1].')
 flags.DEFINE_float('pixel_std1', 0.7, 'StdDev of reconstructed pixels.')
@@ -65,7 +67,9 @@ class Genesis(nn.Module):
         # Model config
         self.two_stage = cfg.two_stage
         self.autoreg_prior = cfg.autoreg_prior
-        self.comp_prior = cfg.comp_prior if self.two_stage else False
+        self.comp_prior = False
+        if self.two_stage and self.K_steps > 1:
+            self.comp_prior = cfg.comp_prior
         self.ldim = cfg.attention_latents
         self.pixel_bound = cfg.pixel_bound
         # Sanity checks
@@ -80,16 +84,39 @@ class Genesis(nn.Module):
         # - Attention core
         att_nin = input_channels
         att_nout = 1
-        att_core = VAE(self.ldim, [att_nin, cfg.img_size, cfg.img_size],
-                       att_nout, cfg.enc_norm, cfg.dec_norm)
+        att_core = sylvester.VAE(
+            self.ldim, [att_nin, cfg.img_size, cfg.img_size],
+            att_nout, cfg.enc_norm, cfg.dec_norm)
         # - Attention process
-        self.att_steps = self.K_steps
-        self.att_process = seq_att.LatentSBP(att_core)
+        if self.K_steps > 1:
+            self.att_steps = self.K_steps
+            self.att_process = seq_att.LatentSBP(att_core)
         # - Component VAE
         if self.two_stage:
             self.comp_vae = ComponentVAE(
                 nout=input_channels, cfg=cfg, act=nn.ELU())
+            if cfg.comp_symmetric:
+                self.comp_vae.encoder_module = nn.Sequential(
+                    sylvester.build_gc_encoder(
+                        [input_channels+1, 32, 32, 64, 64],
+                        [32, 32, 64, 64, 64],
+                        [1, 2, 1, 2, 1],
+                        2*cfg.comp_ldim,
+                        att_core.last_kernel_size,
+                        hn=cfg.enc_norm, gn=cfg.enc_norm),
+                    B.Flatten())
+                self.comp_vae.decoder_module = nn.Sequential(
+                    B.UnFlatten(),
+                    sylvester.build_gc_decoder(
+                        [64, 64, 32, 32, 32],
+                        [64, 32, 32, 32, 32],
+                        [1, 2, 1, 2, 1],
+                        cfg.comp_ldim,
+                        att_core.last_kernel_size,
+                        hn=cfg.dec_norm, gn=cfg.dec_norm),
+                    nn.Conv2d(32, input_channels, 1))
         else:
+            assert self.K_steps > 1
             self.decoder = decoders.BroadcastDecoder(
                 in_chnls=self.ldim, out_chnls=input_channels,
                 h_chnls=cfg.comp_dec_channels, num_layers=cfg.comp_dec_layers,
@@ -97,11 +124,11 @@ class Genesis(nn.Module):
 
         # --- Priors ---
         # Optional: Autoregressive prior
-        if self.autoreg_prior:
+        if self.autoreg_prior and self.K_steps > 1:
             self.prior_lstm = nn.LSTM(self.ldim, 256)
             self.prior_linear = nn.Linear(256, 2*self.ldim)
         # Optional: Component prior - only relevant for two stage model
-        if self.comp_prior and self.two_stage:
+        if self.comp_prior and self.two_stage and self.K_steps > 1:
             self.prior_mlp = nn.Sequential(
                 nn.Linear(self.ldim, 256), nn.ELU(),
                 nn.Linear(256, 256), nn.ELU(),
@@ -128,7 +155,12 @@ class Genesis(nn.Module):
         """
 
         # --- Predict segmentation masks ---
-        log_m_k, log_s_k, att_stats = self.att_process(x, self.att_steps)
+        if self.K_steps > 1:
+            log_m_k, log_s_k, att_stats = self.att_process(x, self.att_steps)
+        else:
+            log_m_k = [torch.zeros_like(x[:, :1, :, :])]
+            log_s_k = [-1e10*torch.ones_like(x[:, :1, :, :])]
+            att_stats = None
         # UGLY: Need to correct the last mask for one stage model wo/ softmax
         # OR when running the two stage model for an additional step
         if len(log_m_k) == self.K_steps+1:
@@ -156,39 +188,45 @@ class Genesis(nn.Module):
 
         # --- Loss terms ---
         losses = AttrDict()
+        
         # -- Reconstruction loss
         losses['err'] = self.x_loss(x, log_m_k, x_r_k, self.std)
+        
         # -- Attention mask KL
-        # Using normalising flow, arbitrary posterior
-        if 'zm_0_k' in att_stats and 'zm_k_k' in att_stats:
-            q_zm_0_k = [Normal(m, s) for m, s in
-                        zip(att_stats.mu_k, att_stats.sigma_k)]
-            zm_0_k = att_stats.z_0_k
-            zm_k_k = att_stats.z_k_k  #TODO(martin) variable name not ideal
-            ldj_k = att_stats.ldj_k
-        # No flow, Gaussian posterior
+        if self.K_steps > 1:
+            # Using normalising flow, arbitrary posterior
+            if 'zm_0_k' in att_stats and 'zm_k_k' in att_stats:
+                q_zm_0_k = [Normal(m, s) for m, s in
+                            zip(att_stats.mu_k, att_stats.sigma_k)]
+                zm_0_k = att_stats.z_0_k
+                zm_k_k = att_stats.z_k_k  #TODO(martin) variable name not ideal
+                ldj_k = att_stats.ldj_k
+            # No flow, Gaussian posterior
+            elif 'mu_k' in att_stats and 'sigma_k' in att_stats:
+                q_zm_0_k = [Normal(m, s) for m, s in
+                            zip(att_stats.mu_k, att_stats.sigma_k)]
+                zm_0_k = att_stats.z_k
+                zm_k_k = att_stats.z_k
+                ldj_k = None
+            # Compute loss
+            losses['kl_m_k'], p_zm_k = self.mask_latent_loss(
+                q_zm_0_k, zm_0_k, zm_k_k, ldj_k, self.prior_lstm, self.prior_linear,
+                debug=self.debug or not self.training)
+            att_stats['pmu_k'] = [p_zm.mean for p_zm in p_zm_k]
+            att_stats['psigma_k'] = [p_zm.scale for p_zm in p_zm_k]
+            # Sanity checks
+            if self.debug or not self.training:
+                assert len(zm_k_k) == self.K_steps
+                assert len(zm_0_k) == self.K_steps
+                if ldj_k is not None:
+                    assert len(ldj_k) == self.K_steps
         else:
-            q_zm_0_k = [Normal(m, s) for m, s in
-                        zip(att_stats.mu_k, att_stats.sigma_k)]
-            zm_0_k = att_stats.z_k
-            zm_k_k = att_stats.z_k
-            ldj_k = None
-        # Compute loss
-        losses['kl_m_k'], p_zm_k = self.mask_latent_loss(
-            q_zm_0_k, zm_0_k, zm_k_k, ldj_k, self.prior_lstm, self.prior_linear,
-            debug=self.debug or not self.training)
-        att_stats['pmu_k'] = [p_zm.mean for p_zm in p_zm_k]
-        att_stats['psigma_k'] = [p_zm.scale for p_zm in p_zm_k]
-        # Sanity checks
-        if self.debug or not self.training:
-            assert len(zm_k_k) == self.K_steps
-            assert len(zm_0_k) == self.K_steps
-            if ldj_k is not None:
-                assert len(ldj_k) == self.K_steps
+            losses['kl_m'] = torch.tensor(0.)
+        
         # -- Component KL
         if self.two_stage:
+            losses['kl_l_k'] = []
             if self.comp_prior:
-                losses['kl_l_k'] = []
                 comp_stats['pmu_k'], comp_stats['psigma_k'] = [], []
                 for step, zl in enumerate(comp_stats.z_k):
                     mlp_out = self.prior_mlp(zm_k_k[step])
@@ -203,12 +241,19 @@ class Genesis(nn.Module):
                     losses['kl_l_k'].append(kld)
                 # Sanity checks
                 if self.debug or not self.training:
-                    assert len(comp_stats.z_k) == self.K_steps
                     assert len(comp_stats['pmu_k']) == self.K_steps
                     assert len(comp_stats['psigma_k']) == self.K_steps
-                    assert len(losses['kl_l_k']) == self.K_steps
             else:
-                raise NotImplementedError
+                p_zl = Normal(0, 1)
+                for step, zl in enumerate(comp_stats.z_k):
+                    q_zl = Normal(
+                        comp_stats.mu_k[step], comp_stats.sigma_k[step])
+                    kld = (q_zl.log_prob(zl) - p_zl.log_prob(zl)).sum(dim=1)
+                    losses['kl_l_k'].append(kld)
+            # Sanity checks
+            if self.debug or not self.training:
+                assert len(comp_stats.z_k) == self.K_steps
+                assert len(losses['kl_l_k']) == self.K_steps
 
         # Tracking
         stats = AttrDict(
@@ -293,6 +338,8 @@ class Genesis(nn.Module):
         return kl_m_k, p_zm_k
 
     def sample(self, batch_size, K_steps=None):
+        if self.K_steps == 1:
+            raise NotImplementedError
         K_steps = self.K_steps if K_steps is None else K_steps
         # --- Mask ---
         # Sample latents
