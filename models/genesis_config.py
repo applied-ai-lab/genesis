@@ -95,7 +95,7 @@ class Genesis(nn.Module):
         if self.two_stage:
             self.comp_vae = ComponentVAE(
                 nout=input_channels, cfg=cfg, act=nn.ELU())
-            if cfg.comp_symmetric:
+            if cfg.get('comp_symmetric', False):
                 self.comp_vae.encoder_module = nn.Sequential(
                     sylvester.build_gc_encoder(
                         [input_channels+1, 32, 32, 64, 64],
