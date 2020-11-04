@@ -12,7 +12,6 @@
 # =========================== A2I Copyright Header ===========================
 
 import os
-import time
 
 import torch
 import torch.nn.functional as F
