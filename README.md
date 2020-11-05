@@ -144,4 +144,4 @@ The full licenses are included in the respective folders.
 ### Contributions
 
 We welcome contributions via pull requests.
-Otherwise, please let us know if you come across any issues.
+Otherwise, drop us a line if you come across any issues or to request any additional features.
