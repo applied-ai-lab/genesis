@@ -54,7 +54,7 @@ def main_flags():
                          'Number of iterations between reporting minibatch loss.')
     flags.DEFINE_integer('run_validation_every', 10000,
                          'How many equally spaced validation runs to do.')
-    flags.DEFINE_integer('num_checkpoints', 40,
+    flags.DEFINE_integer('num_checkpoints', 4,
                          'How many equally spaced model checkpoints to save.')
     flags.DEFINE_boolean('resume', False, 'Tries to resume a job if True.')
     flags.DEFINE_boolean('log_grads_and_weights', False,
