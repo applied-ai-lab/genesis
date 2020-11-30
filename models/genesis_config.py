@@ -72,6 +72,9 @@ class Genesis(nn.Module):
             self.comp_prior = cfg.comp_prior
         self.ldim = cfg.attention_latents
         self.pixel_bound = cfg.pixel_bound
+        # Default config for backwards compatibility
+        if not hasattr(cfg, 'comp_symmetric'):
+            cfg.comp_symmetric = False
         # Sanity checks
         self.debug = cfg.debug
         assert cfg.montecarlo_kl == True  # ALWAYS use MC for estimating KL
@@ -95,7 +98,7 @@ class Genesis(nn.Module):
         if self.two_stage:
             self.comp_vae = ComponentVAE(
                 nout=input_channels, cfg=cfg, act=nn.ELU())
-            if cfg.get('comp_symmetric', False):
+            if cfg.comp_symmetric:
                 self.comp_vae.encoder_module = nn.Sequential(
                     sylvester.build_gc_encoder(
                         [input_channels+1, 32, 32, 64, 64],
