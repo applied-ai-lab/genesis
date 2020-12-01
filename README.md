@@ -57,14 +57,14 @@ Note that we use a modified version of the TensorFlow GQN data loader from https
 ### ShapeStacks
 You need about 30GB of free disk space for ShapeStacks:
 ```shell
-cd ~/code/genesis
-mkdir -p data/shapestacks
-cp utils/shapestacks_urls.txt data/shapestacks
-cd data/shapestacks
 # Download compressed dataset
-wget -i shapestacks_urls.txt
+cd data
+wget -i ../utils/shapestacks_urls.txt
 # Uncompress files
-bash ../../utils/uncompress_shapestacks.sh
+tar xvzf shapestacks-meta.tar.gz
+tar xvzf shapestacks-mjcf.tar.gz
+tar xvzf shapestacks-rgb.tar.gz
+cd -
 ```
 
 The instance segmentation labels for ShapeStacks can be downloaded from [here](https://drive.google.com/open?id=1KsSQCgb1JJExbKyrIkTwBL9VidGcq2k7).
