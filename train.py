@@ -106,6 +106,10 @@ def main():
 
     # Setup checkpoint or resume
     logdir = osp.join(config.results_dir, config.run_name)
+    if config.resume and not osp.exists(logdir):
+        fprint((f"WARNING: Tried to resume training but couldn't find logdir; "
+               "training form scratch instead"), True)
+        config.resume = False
     logdir, resume_checkpoint = fet.init_checkpoint(
         logdir, config.data_config, config.model_config, config.resume)
     checkpoint_name = osp.join(logdir, 'model.ckpt')
