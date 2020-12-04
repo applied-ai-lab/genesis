@@ -52,7 +52,7 @@ def main_flags():
                         'Name of this job and name of results folder.')
     flags.DEFINE_integer('report_loss_every', 1000,
                          'Number of iterations between reporting minibatch loss.')
-    flags.DEFINE_integer('run_validation_every', 10000,
+    flags.DEFINE_integer('run_validation_every', 25000,
                          'How many equally spaced validation runs to do.')
     flags.DEFINE_integer('num_checkpoints', 4,
                          'How many equally spaced model checkpoints to save.')
@@ -62,7 +62,7 @@ def main_flags():
     flags.DEFINE_boolean('log_distributions', False,
                          'Log mu and sigma of posterior and prior distributions.')
     # Optimisation config
-    flags.DEFINE_integer('train_iter', 2000000,
+    flags.DEFINE_integer('train_iter', 500000,
                          'Number of training iterations.')
     flags.DEFINE_integer('batch_size', 32, 'Mini-batch size.')
     flags.DEFINE_string('optimiser', 'adam', 'Optimiser for updating weights.')
