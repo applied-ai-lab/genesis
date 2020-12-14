@@ -73,6 +73,11 @@ def loader_throughput(loader, num_batches=100, burn_in=5):
     fprint(f"{spb:.3f} s/b, {ips:.1f} im/s")
 
 
+def log_scalars(sdict, tag, step, writer):
+    for key, val in sdict.items():
+        writer.add_scalar(f'{tag}/{key}', val, step)
+
+
 def average_ari(log_m_k, instances, foreground_only=False):
     ari = []
     masks_stacked = torch.stack(log_m_k, dim=4).exp().detach()
@@ -89,7 +94,7 @@ def average_ari(log_m_k, instances, foreground_only=False):
     return sum(ari)/len(ari), ari
 
 
-def dataset_ari(model, data_loader, num_images=1000):
+def dataset_ari(model, data_loader, num_images=300):
 
     model.eval()
 
@@ -146,7 +151,7 @@ def iou_binary(mask_A, mask_B, debug=False):
                        intersection.float() / union.float())
 
 
-def average_segcover(segA, segB, scale=True):
+def average_segcover(segA, segB, ignore_background=False):
     """
     Covering of segA by segB
     segA.shape = [batch size, 1, img_dim1, img_dim2]
@@ -159,40 +164,56 @@ def average_segcover(segA, segB, scale=True):
     Negative labels will be ignored.
     """
 
-    assert segA.shape == segB.shape
+    assert segA.shape == segB.shape, f"{segA.shape} - {segB.shape}"
     assert segA.shape[1] == 1 and segB.shape[1] == 1
     bsz = segA.shape[0]
+    nonignore = (segA >= 0)
+
+    mean_scores = torch.tensor(bsz*[0.0])
     N = torch.tensor(bsz*[0])
-    scores = torch.tensor(bsz*[0.0])
+    scaled_scores = torch.tensor(bsz*[0.0])
+    scaling_sum = torch.tensor(bsz*[0])
+
+    # Find unique label indices to iterate over
+    if ignore_background:
+        iter_segA = torch.unique(segA[segA > 0]).tolist()
+    else:
+        iter_segA = torch.unique(segA[segA >= 0]).tolist()
+    iter_segB = torch.unique(segB[segB >= 0]).tolist()
     # Loop over segA
-    for i in range(segA.max().item() + 1):
+    for i in iter_segA:
         binaryA = segA == i
-        N = torch.where(binaryA.sum((1, 2, 3)) > 0, N+1, N)
         if not binaryA.any():
             continue
         max_iou = torch.tensor(bsz*[0.0])
         # Loop over segB to find max IOU
-        for j in range(segB.max().item() + 1):
-            binaryB = segB == j
+        for j in iter_segB:
+            # Do not penalise pixels that are in ignore regions
+            binaryB = (segB == j) * nonignore
             if not binaryB.any():
                 continue
             iou = iou_binary(binaryA, binaryB)
             max_iou = torch.where(iou > max_iou, iou, max_iou)
-        # Scale
-        if scale:
-            scores += binaryA.sum((1, 2, 3)).float() * max_iou
-        else:
-            scores += max_iou
-    if scale:
-        nonignore = segA >= 0
-        coverage = scores / nonignore.sum((1, 2, 3)).float()
-    else:
-        coverage = scores / N.float()
+        # Accumulate scores
+        mean_scores += max_iou
+        N = torch.where(binaryA.sum((1, 2, 3)) > 0, N+1, N)
+        scaled_scores += binaryA.sum((1, 2, 3)).float() * max_iou
+        scaling_sum += binaryA.sum((1, 2, 3))
+
+    # Compute coverage
+    mean_sc = mean_scores / torch.max(N, torch.tensor(1)).float()
+    scaled_sc = scaled_scores / torch.max(scaling_sum, torch.tensor(1)).float()
+
     # Sanity check
-    assert (0.0 <= coverage).all() and (coverage <= 1.0).all()
-    # Take average over batch dimension
-    coverage = coverage.mean(0).item()
-    return coverage
+    assert (mean_sc >= 0).all() and (mean_sc <= 1).all(), mean_sc
+    assert (scaled_sc >= 0).all() and (scaled_sc <= 1).all(), scaled_sc
+    assert (mean_scores[N == 0] == 0).all()
+    assert (mean_scores[nonignore.sum((1, 2, 3)) == 0] == 0).all()
+    assert (scaled_scores[N == 0] == 0).all()
+    assert (scaled_scores[nonignore.sum((1, 2, 3)) == 0] == 0).all()
+
+    # Return mean over batch dimension 
+    return mean_sc.mean(0), scaled_sc.mean(0)
 
 
 def get_kl(z, q_z, p_z, montecarlo):

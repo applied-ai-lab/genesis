@@ -107,20 +107,15 @@ def main():
             ari_fg, _ = average_ari(stats.log_m_k, x['instances'],
                                     foreground_only=True)
             # Segmentation covering - foreground only
-            gt_instances = x['instances'].clone()
-            gt_instances[gt_instances == 0] = -100
-            ins_preds = torch.argmax(torch.stack(stats.log_m_k, dim=1), dim=1)
-            sc_fg = average_segcover(gt_instances, ins_preds)
-            msc_fg = average_segcover(gt_instances, ins_preds, False)
+            iseg = torch.argmax(torch.cat(stats.log_m_k, 1), 1, True)
+            msc_fg, _ = average_segcover(x['instances'], iseg, True)
             # Recording
             ari_fg_list.append(ari_fg)
-            sc_fg_list.append(sc_fg)
             msc_fg_list.append(msc_fg)
 
     # Print average metrics
     fprint(f"Average FG ARI: {sum(ari_fg_list)/len(ari_fg_list)}")
-    fprint(f"Average FG SegCover: {sum(sc_fg_list)/len(sc_fg_list)}")
-    fprint(f"Average FG MeanSegCover: {sum(msc_fg_list)/len(msc_fg_list)}")
+    fprint(f"Average FG MSC: {sum(msc_fg_list)/len(msc_fg_list)}")
 
 
 if __name__ == "__main__":

@@ -14,8 +14,8 @@
 import sys
 from os import path as osp
 import time
-import datetime
 import simplejson as json
+from attrdict import AttrDefault
 
 import torch
 import torch.nn as nn
@@ -32,6 +32,7 @@ import forge.experiment_tools as fet
 from forge.experiment_tools import fprint
 
 from utils.geco import GECO
+from utils.misc import average_ari, average_segcover, log_scalars
 from scripts.compute_fid import fid_from_model
 
 
@@ -257,8 +258,7 @@ def main():
             diverged = float(elbo) > ELBO_DIV
             if iter_idx % config.report_loss_every == 0 or diverged:
                 # Print output and write to file
-                ps = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                ps += f' {config.run_name} | '
+                ps = f'{config.run_name} | '
                 ps += f'[{iter_idx}/{config.train_iter:.0e}]'
                 ps += f' elb: {float(elbo):.0f} err: {float(err):.0f} '
                 if 'kl_m' in losses or 'kl_m_k' in losses:
@@ -269,7 +269,7 @@ def main():
                 s_per_b = (time.time()-timer) / config.report_loss_every
                 timer = time.time()  # Reset timer
                 ps += f' - {s_per_b:.2f} s/b'
-                fprint(ps)
+                fprint(ps, True)
 
                 # TensorBoard logging
                 # -- Optimisation stats
@@ -338,13 +338,14 @@ def main():
                                              iter_idx)
                         writer.add_histogram(f'grads/{name}', param.grad,
                                              iter_idx)
-                # TensorboardX logging - images
+                # Visualise model outputs
                 visualise_outputs(model, train_batch, writer, 'train', iter_idx)
-                # Validation
+                # Log validation metrics
                 fprint("Running validation...")
                 eval_model = model.module if config.multi_gpu else model
-                evaluation(eval_model, val_loader, writer, config, iter_idx,
-                           N_eval=config.N_eval)
+                val_stats = evaluation(eval_model, val_loader, writer, config,
+                                       iter_idx, N_eval=config.N_eval)
+                fprint(f"VALIDATON STATS: {val_stats}")
 
             # Increment counter
             iter_idx += 1
@@ -379,9 +380,9 @@ def main():
     # Test evaluation
     fprint("STARTING TESTING...")
     eval_model = model.module if config.gpu and config.multi_gpu else model
-    final_elbo = evaluation(
+    test_stats = evaluation(
         eval_model, test_loader, None, config, iter_idx, N_eval=config.N_eval)
-    fprint(f"TEST ELBO = {float(final_elbo)}")
+    fprint(f"TEST STATS | {test_stats}", True)
 
     # FID computation
     try:
@@ -437,83 +438,106 @@ def visualise_outputs(model, vis_batch, writer, mode, iter_idx):
     model.train()
 
 
-def evaluation(model, data_loader, writer, config, iter_idx, N_eval=None):
-    # TODO(martin): make interface cleaner
+def evaluation(model, data_loader, writer, config, iter_idx,
+               N_eval=None, N_seg_metrics=50):
 
     model.eval()
+    torch.set_grad_enabled(False)
 
-    t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if iter_idx == 0 or config.debug:
         num_batches = 1
+        fprint(f"ITER 0 / DEBUG - eval on {num_batches} batches", True)
     elif N_eval is not None and N_eval <= len(data_loader)*data_loader.batch_size:
-        num_batches = N_eval // data_loader.batch_size
-        fprint(t + f" | Evaluating only on first {N_eval} examples in loader")
+        num_batches = int(N_eval // data_loader.batch_size)
+        fprint(f"N_eval = {N_eval}, eval on {num_batches} batches", True)
     else:
         num_batches = len(data_loader)
-        fprint(t + f" | Evaluating on all {num_batches} examples in loader")
+        fprint(f"Eval on all {num_batches} batches")
 
     start_t = time.time()
-    err, kl_l, kl_m, elbo = 0., 0., 0., 0.
+    eval_stats = AttrDefault(list, {})
     batch = None
 
-    # Don't compute gradient to run faster
-    with torch.no_grad():
-        # Loop over loader
-        for b_idx, batch in enumerate(data_loader):
-            if config.gpu:
-                batch['input'] = batch['input'].cuda()
-            if b_idx == num_batches:
-                fprint(f"Breaking from eval loop after {b_idx} batches")
-                break
+    # Loop over loader
+    for b_idx, batch in enumerate(data_loader):
+        if b_idx == num_batches:
+            fprint(f"Breaking from eval loop after {b_idx} batches")
+            break
 
-            if b_idx % 100 == 0:
-                t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                fprint(t + f" | Validation batch [{b_idx+1} | {num_batches}]")
+        if config.gpu:
+            for key, val in batch.items():
+                batch[key] = val.cuda()
 
-            _, losses, stats, _, _ = model(batch['input'])
+        # Forward pass
+        _, losses, stats, _, _ = model(batch['input'])
 
-            new_err = losses.err.mean(0)
-            err += float(new_err) / num_batches
-            # Parse different loss types
-            if 'kl_m' in losses:
-                new_kl_m = losses.kl_m.mean(0)
-                kl_m += float(new_kl_m) / num_batches
-            elif 'kl_m_k' in losses:
-                new_kl_m = torch.stack(losses.kl_m_k, dim=1).sum(1).mean(0)
-                kl_m += float(new_kl_m) / num_batches
-            if 'kl_l' in losses:
-                new_kl_l = losses.kl_l.mean(0)
-                kl_l += float(new_kl_l) / num_batches
-            elif 'kl_l_k' in losses:
-                new_kl_l = torch.stack(losses.kl_l_k, dim=1).sum(1).mean(0)
-                kl_l += float(new_kl_l) / num_batches
-            # Update ELBO
-            if 'elbo' not in losses:
-                # Assign current "estimate"
-                elbo += float(new_err + new_kl_l + new_kl_m) / num_batches
+        # Track individual loss terms
+        for key, val in losses.items():
+            # Sum over steps if needed
+            if isinstance(val, list):
+                eval_stats[key].append(torch.stack(val, 1).sum(1).mean(0))
             else:
-                # Add over steps
-                elbo += float(losses.elbo.mean(0)) / num_batches
+                eval_stats[key].append(val.mean(0))
+
+        # Track ELBO
+        kl_m, kl_l = torch.tensor(0), torch.tensor(0)
+        if 'kl_m_k' in losses:
+            kl_m = torch.stack(losses.kl_m_k, dim=1).sum(1).mean(0)
+        elif 'kl_m' in losses:
+            kl_m = losses.kl_m.mean(0)
+        if 'kl_l_k' in losses:
+            kl_l = torch.stack(losses.kl_l_k, dim=1).sum(1).mean(0)
+        elif 'kl_l' in losses:
+            kl_l = losses.kl_l.mean(0)
+        eval_stats['elbo'].append(losses.err.mean(0) + kl_m + kl_l)
+
+        # Track segmentation metrics metrics
+        if      ('instances' in batch and 'log_m_k' in stats and
+                 b_idx*config.batch_size < N_seg_metrics):
+            # ARI
+            new_ari, _ = average_ari(
+                stats.log_m_k, batch['instances'])
+            new_ari_fg, _ = average_ari(
+                stats.log_m_k, batch['instances'], True)
+            eval_stats['ari'].append(new_ari)
+            eval_stats['ari_fg'].append(new_ari_fg)
+            # Segmentation Covering
+            iseg = torch.argmax(torch.cat(stats.log_m_k, 1), 1, True)
+            msc, _ = average_segcover(batch['instances'], iseg)
+            msc_fg, _ = average_segcover(batch['instances'], iseg,
+                                         ignore_background=True)
+            eval_stats['msc'].append(msc)
+            eval_stats['msc_fg'].append(msc_fg)
+
+    # Sum over batches
+    for key, val in eval_stats.items():
+        # Sanity check
+        if ('ari' in key or 'msc' in key) and not config.debug:
+            assert len(val)*config.batch_size >= N_seg_metrics
+            assert len(val)*config.batch_size < N_seg_metrics+config.batch_size
+        eval_stats[key] = sum(val) / len(val)
+
+    # Track element-wise error
+    nelements = np.prod(batch['input'].shape[1:4])
+    eval_stats['err_element'] = eval_stats['err'] / nelements
 
     # Printing
     duration = time.time() - start_t
-    pstr = f'Evaluation elbo: {elbo:.1f}'
-    pstr += f', err: {err:.1f}, kl_l: {kl_l:.1f}'
-    pstr += f', kl_m: {kl_m:.1f}'
-    pstr += f' --- {num_batches / duration:.1f} b/s'
-    fprint(pstr)
+    fprint(f'Eval duration: {duration:.1f}s, {num_batches / duration:.1f} b/s')
+    eval_stats['duration'] = duration
+    eval_stats['num_batches'] = num_batches
+    eval_stats = dict(eval_stats)
+    for key, val in eval_stats.items():
+        eval_stats[key] = float(val)
 
     # TensorBoard logging
     if writer is not None:
-        # TensorBoard logging - scalars
-        writer.add_scalar('val/elbo', elbo, iter_idx)
-        writer.add_scalar('val/err', err, iter_idx)
-        writer.add_scalar('val/kl_l', kl_l, iter_idx)
-        writer.add_scalar('val/kl_m', kl_m, iter_idx)
+        log_scalars(eval_stats, 'val', iter_idx, writer)
 
     model.train()
+    torch.set_grad_enabled(True)
 
-    return elbo
+    return eval_stats
 
 
 if __name__ == '__main__':
