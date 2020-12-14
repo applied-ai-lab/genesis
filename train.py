@@ -338,8 +338,7 @@ def main():
                         writer.add_histogram(f'grads/{name}', param.grad,
                                              iter_idx)
                 # TensorboardX logging - images
-                visualise_inference(model, train_batch, writer, 'train', 
-                                    iter_idx)
+                visualise_outputs(model, train_batch, writer, 'train', iter_idx)
                 # Validation
                 fprint("Running validation...")
                 eval_model = model.module if config.multi_gpu else model
@@ -393,18 +392,19 @@ def main():
     writer.close()
 
 
-def visualise_inference(model, vis_batch, writer, mode, iter_idx):
+def visualise_outputs(model, vis_batch, writer, mode, iter_idx):
+    
+    model.eval()
+    
     # Only visualise for eight images
     # Forward pass
     vis_input = vis_batch['input'][:8]
     if next(model.parameters()).is_cuda:
         vis_input = vis_input.cuda()
     output, losses, stats, att_stats, comp_stats = model(vis_input)
-
     # Input and recon
     writer.add_image(mode+'_input', make_grid(vis_batch['input'][:8]), iter_idx)
     writer.add_image(mode+'_recon', make_grid(output), iter_idx)
-
     # Decomposition
     for key in ['mx_r_k', 'x_r_k', 'log_m_k', 'log_m_r_k']:
         if key not in stats:
@@ -413,6 +413,23 @@ def visualise_inference(model, vis_batch, writer, mode, iter_idx):
             if 'log' in key:
                 val = val.exp()
             writer.add_image(f'{mode}_{key}/k{step}', make_grid(val), iter_idx)
+    
+    # Generation
+    try:
+        output, stats = model.sample(batch_size=8, K_steps=model.K_steps)
+        writer.add_image('samples', make_grid(output), iter_idx)
+        for key in ['x_k', 'log_m_k', 'mx_k']:
+            if key not in stats:
+                continue
+            for step, val in enumerate(stats[key]):
+                if 'log' in key:
+                    val = val.exp()
+                writer.add_image(f'gen_{key}/k{step}', make_grid(val),
+                                    iter_idx)
+    except NotImplementedError:
+        fprint("Sampling not implemented for this model.")
+    
+    model.train()
 
 
 def evaluation(model, data_loader, writer, config, iter_idx, N_eval=None):
@@ -488,22 +505,6 @@ def evaluation(model, data_loader, writer, config, iter_idx, N_eval=None):
         writer.add_scalar('val/err', err, iter_idx)
         writer.add_scalar('val/kl_l', kl_l, iter_idx)
         writer.add_scalar('val/kl_m', kl_m, iter_idx)
-        # TensorBoard logging - inference (limit to 8)
-        visualise_inference(model, batch, writer, 'val', iter_idx)
-        # TensorBoard logging - generation (limit to 8)
-        try:
-            output, stats = model.sample(batch_size=8, K_steps=config.K_steps)
-            writer.add_image('samples', make_grid(output), iter_idx)
-            for key in ['x_k', 'log_m_k', 'mx_k']:
-                if key not in stats:
-                    continue
-                for step, val in enumerate(stats[key]):
-                    if 'log' in key:
-                        val = val.exp()
-                    writer.add_image(f'gen_{key}/k{step}', make_grid(val),
-                                     iter_idx)
-        except NotImplementedError:
-            fprint("Sampling not implemented for this model.")
 
     model.train()
 
