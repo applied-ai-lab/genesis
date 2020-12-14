@@ -28,7 +28,7 @@ from utils.misc import loader_throughput
 flags.DEFINE_string('data_folder', 'data/multi_dsprites/processed',
                     'Path to data folder.')
 
-flags.DEFINE_boolean('load_instances', False, 'Load instances.')
+flags.DEFINE_boolean('load_instances', True, 'Load instances.')
 
 flags.DEFINE_integer('img_size', 64,
                      'Dimension of images. Images are square.')

@@ -37,7 +37,7 @@ flags.DEFINE_integer('img_size', 64, 'Dimension of images. Images are square.')
 flags.DEFINE_boolean('shuffle_test', False, 'Shuffle test set.')
 
 flags.DEFINE_integer('num_workers', 4, 'Number of threads for loading data.')
-flags.DEFINE_boolean('load_instances', False, 'Load instances.')
+flags.DEFINE_boolean('load_instances', True, 'Load instances.')
 flags.DEFINE_boolean('copy_to_tmp', False, 'Copy files to /tmp.')
 
 flags.DEFINE_integer('K_steps', 9, 'Number of recurrent steps.')
