@@ -96,6 +96,9 @@ def main():
     if config.debug:
         config.num_workers = 0
         config.batch_size = 2
+        config.train_iter = 10
+        config.report_loss_every = 1
+        config.run_validation_every = 5
 
     # Fix seeds. Always first thing to be done after parsing the config!
     torch.manual_seed(config.seed)
@@ -251,8 +254,8 @@ def main():
             optimiser.step()
 
             # Heartbeat log
-            if (iter_idx % config.report_loss_every == 0 or
-                    float(elbo) > ELBO_DIV or config.debug):
+            diverged = float(elbo) > ELBO_DIV
+            if iter_idx % config.report_loss_every == 0 or diverged:
                 # Print output and write to file
                 ps = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 ps += f' {config.run_name} | '
@@ -263,9 +266,7 @@ def main():
                 if 'kl_l' in losses or 'kl_l_k' in losses:
                     ps += f' kll: {float(kl_l):.1f}'
                 ps += f' bet: {float(beta):.1e}'
-                s_per_b = (time.time()-timer)
-                if not config.debug:
-                    s_per_b /= config.report_loss_every
+                s_per_b = (time.time()-timer) / config.report_loss_every
                 timer = time.time()  # Reset timer
                 ps += f' - {s_per_b:.2f} s/b'
                 fprint(ps)
@@ -384,7 +385,11 @@ def main():
 
     # FID computation
     try:
-        fid_from_model(model, test_loader, img_dir=osp.join('/tmp', logdir))
+        fid_from_model(
+            model, test_loader,
+            batch_size=10 if not config.debug else 2,
+            num_images=10000 if not config.debug else 10,
+            img_dir=osp.join('/tmp', logdir))
     except NotImplementedError:
         fprint("Sampling not implemented for this model.")
 
