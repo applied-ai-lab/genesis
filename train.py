@@ -512,7 +512,7 @@ def evaluation(model, data_loader, writer, config, iter_idx,
     # Sum over batches
     for key, val in eval_stats.items():
         # Sanity check
-        if ('ari' in key or 'msc' in key) and not config.debug:
+        if ('ari' in key or 'msc' in key) and not config.debug and iter_idx > 0:
             assert len(val)*config.batch_size >= N_seg_metrics
             assert len(val)*config.batch_size < N_seg_metrics+config.batch_size
         eval_stats[key] = sum(val) / len(val)
