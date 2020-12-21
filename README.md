@@ -2,24 +2,21 @@
 
 This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); published at the International Conference on Learning Representations (ICLR) 2020.
 
-This implementation also contains code for reproducing ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); Workshop on Object-Oriented Learning at ICML 2020.
-
-The repository also includes a PyTorch [re-implementation of MONet](https://github.com/applied-ai-lab/genesis/blob/master/models/monet_config.py) from ["MONet: Unsupervised Scene Decomposition and Representation"](https://arxiv.org/abs/1901.11390) by Burgess et al.
+Specifically, this repository also includes:
+* code for reproducing ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/) as presented at the Workshop on Object-Oriented Learning at ICML 2020;
+* a [re-implementation of MONet](https://github.com/applied-ai-lab/genesis/blob/master/models/monet_config.py) from ["MONet: Unsupervised Scene Decomposition and Representation"](https://arxiv.org/abs/1901.11390) by Burgess et al;
+* a [re-implementation of GECO](https://github.com/applied-ai-lab/genesis/blob/master/utils/geco.py) from ["Taming VAEs"](https://arxiv.org/abs/1810.00597) by Rezende and Viola.
 
 ## Setup
 Start by cloning the repository, e.g. into `~/code/genesis`:
 ```shell
 git clone --recursive https://github.com/applied-ai-lab/genesis.git ~/code/genesis
 ```
-
-### Forge
 We use Forge (https://github.com/akosiorek/forge) to save some legwork. It is included as a submodule but you need to add it to your python path, e.g. with:
 ```shell
 # If needed, replace .bashrc with .zshrc or similar
 echo 'export PYTHONPATH="${PYTHONPATH}:${HOME}/code/genesis/forge"' >> ~/.bashrc
 ```
-
-### Python dependencies
 You can either install PyTorch, TensorFlow, and all other dependencies manually or you can setup up conda environment with all required dependencies using the `environment.yml` file:
 ```shell
 conda env create -f environment.yml
@@ -27,15 +24,13 @@ conda activate genesis_env
 ```
 
 ## Datasets
-This repository contains data loaders for the three datasets considered in the [paper](https://arxiv.org/abs/1907.13052):
-- Multi-dSprites
-- GQN (rooms-ring-camera)
-- ShapeStacks
+This repository contains data loaders for the three datasets considered in the [ICLR paper](https://arxiv.org/abs/1907.13052).
+A few steps are required for setting up each individual dataset.
 
-This order aligns with the increasing visual complexity of the datasets. A few steps are required for setting up each individual dataset.
+We also provide a PyTorch wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi-object-datasets/) used for the experiments on the `Objects Room` dataset in the [ICML workshop paper](https://oolworkshop.github.io/program/ool_5.html).
 
 ### Multi-dSprites
-Generate coloured Multi-dSprites from the original dSprites with:
+Generate coloured Multi-dSprites from the original dSprites dataset with:
 ```shell
 cd ~/code/genesis
 mkdir -p data/multi_dsprites/processed
@@ -71,7 +66,6 @@ The instance segmentation labels for ShapeStacks can be downloaded from [here](h
 
 ### Multi-Object Datasets
 The repository contains a wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi-object-datasets/), returning an iterable which behaves similarly to a PyTorch DataLoader object.
-This is used for the experiments on the `Objects Room` dataset in the ICML workshop paper.
 The default config assumes that any datasets you wish to use have been downloaded to `data/multi-object-datasets`.
 
 ## Experiments
@@ -101,7 +95,16 @@ See `train.py` and the config files for the available flags.
 TensorBoard logs are written to file with [TensorboardX](https://github.com/lanpa/tensorboardX). Run `tensorboard --logdir checkpoints` to monitor training.
 
 ### Pretrained models
-Models trained on the three datasets with the default flags are available [here](https://drive.google.com/drive/folders/1uLSV5eV6Iv4BYIyh0R9DUGJT2W6QPDkb?usp=sharing).
+Models pretrained on the three datasets used in the ICLR paper are available [here](https://drive.google.com/drive/folders/1uLSV5eV6Iv4BYIyh0R9DUGJT2W6QPDkb?usp=sharing).
+
+Generation and segmentation metrics of the released model checkpoints are summarised in the following table with results from the ICLR paper included in parentheses:
+| Model | Dataset | FID | ARI | MSC |
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| GENESIS | Multi-dSprites | 25.0 (24.9) | - | - |
+| GENESIS | GQN | 79.4 (80.5) | - | - |
+| GENESIS | ShapeStacks | 235.4 | 0.57 (0.73+-0.03) | 0.72 (0.60+-0.09) |
+
+**NOTE:** Results can sometimes vary considerably between individual runs. It is recommended to perform multiple runs with different random seeds to obtain a sense for model performance.
 
 ### Evaluation metrics
 See `scripts/compute_fid.py` and `scripts/compute_seg_metrics.py`.
