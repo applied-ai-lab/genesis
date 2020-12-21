@@ -81,8 +81,8 @@ def load(cfg, **unused_kwargs):
                                    cfg.img_size,
                                    cfg.mem_map)
     test_loader = DataLoader(test_dataset,
-                             batch_size=1,
-                             shuffle=False,
+                             batch_size=cfg.batch_size,
+                             shuffle=True,
                              num_workers=1)
 
     # Throughput stats

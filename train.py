@@ -444,11 +444,13 @@ def evaluation(model, data_loader, writer, config, iter_idx,
     model.eval()
     torch.set_grad_enabled(False)
 
+    batch_size = data_loader.batch_size
+
     if iter_idx == 0 or config.debug:
         num_batches = 1
         fprint(f"ITER 0 / DEBUG - eval on {num_batches} batches", True)
-    elif N_eval is not None and N_eval <= len(data_loader)*data_loader.batch_size:
-        num_batches = int(N_eval // data_loader.batch_size)
+    elif N_eval is not None and N_eval <= len(data_loader)*batch_size:
+        num_batches = int(N_eval // batch_size)
         fprint(f"N_eval = {N_eval}, eval on {num_batches} batches", True)
     else:
         num_batches = len(data_loader)
@@ -493,7 +495,7 @@ def evaluation(model, data_loader, writer, config, iter_idx,
 
         # Track segmentation metrics metrics
         if      ('instances' in batch and 'log_m_k' in stats and
-                 b_idx*config.batch_size < N_seg_metrics):
+                 b_idx*batch_size < N_seg_metrics):
             # ARI
             new_ari, _ = average_ari(
                 stats.log_m_k, batch['instances'])
@@ -513,8 +515,8 @@ def evaluation(model, data_loader, writer, config, iter_idx,
     for key, val in eval_stats.items():
         # Sanity check
         if ('ari' in key or 'msc' in key) and not config.debug and iter_idx > 0:
-            assert len(val)*config.batch_size >= N_seg_metrics
-            assert len(val)*config.batch_size < N_seg_metrics+config.batch_size
+            assert len(val)*batch_size >= N_seg_metrics
+            assert len(val)*batch_size < N_seg_metrics+batch_size
         eval_stats[key] = sum(val) / len(val)
 
     # Track element-wise error

@@ -90,8 +90,8 @@ def load(cfg, **unused_kwargs):
                                  cfg.load_instances,
                                  shuffle_files=cfg.shuffle_test)
     tst_loader = DataLoader(tst_set,
-                            batch_size=1,
-                            shuffle=False,
+                            batch_size=cfg.batch_size,
+                            shuffle=True,
                             num_workers=1)
 
     # Throughput stats
