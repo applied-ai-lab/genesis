@@ -2,7 +2,7 @@
 
 This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); published at the International Conference on Learning Representations (ICLR) 2020.
 
-This implementation is also used in ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); Workshop on Object-Oriented Learning at ICML 2020.
+This implementation also contains code for reproducing ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); Workshop on Object-Oriented Learning at ICML 2020.
 
 The repository also includes a PyTorch [re-implementation of MONet](https://github.com/applied-ai-lab/genesis/blob/master/models/monet_config.py) from ["MONet: Unsupervised Scene Decomposition and Representation"](https://arxiv.org/abs/1901.11390) by Burgess et al.
 
