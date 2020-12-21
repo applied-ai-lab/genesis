@@ -95,7 +95,7 @@ See `train.py` and the config files for the available flags.
 TensorBoard logs are written to file with [TensorboardX](https://github.com/lanpa/tensorboardX). Run `tensorboard --logdir checkpoints` to monitor training.
 
 ### Pretrained models
-Models pretrained on the three datasets used in the ICLR paper are available [here](https://drive.google.com/drive/folders/1uLSV5eV6Iv4BYIyh0R9DUGJT2W6QPDkb?usp=sharing).
+Models pretrained on the three datasets used in the ICLR paper are available [here](https://drive.google.com/file/d/1aFyAzMdscMe8_w_hbIz5A1Fb1gr8EBNG/view?usp=sharing).
 
 Generation and segmentation metrics of the released model checkpoints are summarised in the following table with results from the ICLR paper included in parentheses:
 | Model | Dataset | FID | ARI | MSC |
