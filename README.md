@@ -64,6 +64,12 @@ The instance segmentation labels for ShapeStacks can be downloaded from [here](h
 ### Multi-Object Datasets
 The repository contains a wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi_object_datasets), returning an iterable which behaves similarly to a PyTorch DataLoader object.
 The default config assumes that any datasets you wish to use have been downloaded to `data/multi-object-datasets`.
+As for the GQN data, this can be done with gsutil.
+You can download all four datasets at once with:
+```shell
+mkdir -p data/multi-objects-datasets
+gsutil cp -r gs://multi-object-datasets data/multi-object-datasets
+```
 
 ## Experiments
 ### Visualising data
