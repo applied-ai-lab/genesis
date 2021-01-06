@@ -62,7 +62,7 @@ cd -
 The instance segmentation labels for ShapeStacks can be downloaded from [here](https://drive.google.com/open?id=1KsSQCgb1JJExbKyrIkTwBL9VidGcq2k7).
 
 ### Multi-Object Datasets
-The repository contains a wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi-object-datasets/), returning an iterable which behaves similarly to a PyTorch DataLoader object.
+The repository contains a wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi_object_datasets), returning an iterable which behaves similarly to a PyTorch DataLoader object.
 The default config assumes that any datasets you wish to use have been downloaded to `data/multi-object-datasets`.
 
 ## Experiments
