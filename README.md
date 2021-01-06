@@ -2,7 +2,7 @@
 
 This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); published at the International Conference on Learning Representations (ICLR) 2020.
 
-Specifically, this repository also includes:
+Among other things, this includes:
 * code for reproducing ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/) as presented at the Workshop on Object-Oriented Learning at ICML 2020;
 * a [re-implementation of MONet](https://github.com/applied-ai-lab/genesis/blob/master/models/monet_config.py) from ["MONet: Unsupervised Scene Decomposition and Representation"](https://arxiv.org/abs/1901.11390) by Burgess et al;
 * a [re-implementation of GECO](https://github.com/applied-ai-lab/genesis/blob/master/utils/geco.py) from ["Taming VAEs"](https://arxiv.org/abs/1810.00597) by Rezende and Viola.
@@ -12,7 +12,7 @@ Start by cloning the repository, e.g. into `~/code/genesis`:
 ```shell
 git clone --recursive https://github.com/applied-ai-lab/genesis.git ~/code/genesis
 ```
-We use Forge (https://github.com/akosiorek/forge) to save some legwork. It is included as a submodule but you need to add it to your python path, e.g. with:
+We use [Forge](https://github.com/akosiorek/forge) to save some legwork. It is included as a submodule but you need to add it to your python path, e.g. with:
 ```shell
 # If needed, replace .bashrc with .zshrc or similar
 echo 'export PYTHONPATH="${PYTHONPATH}:${HOME}/code/genesis/forge"' >> ~/.bashrc
@@ -26,11 +26,10 @@ conda activate genesis_env
 ## Datasets
 This repository contains data loaders for the three datasets considered in the [ICLR paper](https://arxiv.org/abs/1907.13052).
 A few steps are required for setting up each individual dataset.
-
 We also provide a PyTorch wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi-object-datasets/) used for the experiments on the `Objects Room` dataset in the [ICML workshop paper](https://oolworkshop.github.io/program/ool_5.html).
 
 ### Multi-dSprites
-Generate coloured Multi-dSprites from the original dSprites dataset with:
+Generate coloured Multi-dSprites from the original [dSprites dataset](https://github.com/deepmind/dsprites-dataset) with:
 ```shell
 cd ~/code/genesis
 mkdir -p data/multi_dsprites/processed
@@ -39,18 +38,17 @@ python scripts/generate_multid.py
 ```
 
 ### GQN (rooms-ring-camera)
-The GQN datasets are quite large. The `rooms_ring_camera` dataset as used in the paper takes about 250GB and can be downloaded with:
+The [GQN datasets](https://github.com/deepmind/gqn-datasets) are quite large. The `rooms_ring_camera` dataset as used in the paper takes about 250GB and can be downloaded with:
 ```shell
 pip install gsutil
 cd ~/code/genesis
 mkdir -p data/gqn_datasets
 gsutil -m cp -r gs://gqn-dataset/rooms_ring_camera data/gqn_datasets
 ```
-
-Note that we use a modified version of the TensorFlow GQN data loader from https://github.com/ogroth/tf-gqn which is based on https://github.com/deepmind/gqn-datasets.git and included in `third_party/tf_gqn`.
+Note that we use a modified version of the TensorFlow GQN data loader from [ogroth/tf-gqn](https://github.com/ogroth/tf-gqn) which is included in `third_party/tf_gqn`.
 
 ### ShapeStacks
-You need about 30GB of free disk space for ShapeStacks:
+You need about 30GB of free disk space for [ShapeStacks](https://shapestacks.robots.ox.ac.uk/):
 ```shell
 # Download compressed dataset
 cd data
@@ -61,7 +59,6 @@ tar xvzf shapestacks-mjcf.tar.gz
 tar xvzf shapestacks-rgb.tar.gz
 cd -
 ```
-
 The instance segmentation labels for ShapeStacks can be downloaded from [here](https://drive.google.com/open?id=1KsSQCgb1JJExbKyrIkTwBL9VidGcq2k7).
 
 ### Multi-Object Datasets
@@ -129,7 +126,7 @@ If you use this repository in your research, please cite our ICLR paper:
 @article{engelcke2020genesis,
   title={{GENESIS: Generative Scene Inference and Sampling of Object-Centric Latent Representations}},
   author={Engelcke, Martin and Kosiorek, Adam R. and Parker Jones, Oiwi and Posner, Ingmar},
-  journal={Proceedings of the International Conference on Learning Representations (ICLR)},
+  journal={International Conference on Learning Representations (ICLR)},
   year={2020}
 }
 ```
@@ -147,4 +144,4 @@ The full licenses are included in the respective folders.
 ### Contributions
 
 We welcome contributions via pull requests.
-Otherwise, drop us a line if you come across any issues or to request any additional features.
+Otherwise, drop us a line if you come across any issues or to request additional features.
