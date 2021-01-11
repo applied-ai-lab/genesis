@@ -72,7 +72,7 @@ def main_flags():
                          'Number of samples to run evaluation on.')
     # Loss config
     flags.DEFINE_float('beta', 0.5, 'KL weighting.')
-    flags.DEFINE_boolean('beta_warmup', True, 'Warm up beta.')
+    flags.DEFINE_boolean('beta_warmup', False, 'Warm up beta.')
     flags.DEFINE_boolean('geco', True, 'Use GECO objective.')
     flags.DEFINE_float('g_goal', 0.5655, 'GECO recon goal.')
     flags.DEFINE_float('g_lr', 1e-5, 'GECO learning rate.')
@@ -169,6 +169,9 @@ def main():
     # Try to restore model and optimiser from checkpoint
     iter_idx = 0
     if resume_checkpoint is not None:
+        latest_checkpoint = f'{checkpoint_name}-latest'
+        if osp.exists(latest_checkpoint):
+            resume_checkpoint = latest_checkpoint
         fprint(f"Restoring checkpoint from {resume_checkpoint}")
         checkpoint = torch.load(resume_checkpoint, map_location='cpu')
         # Restore model & optimiser
@@ -230,8 +233,6 @@ def main():
 
             # Compute ELBO
             elbo = (err + kl_l + kl_m).detach()
-            err_new = err.detach()
-            kl_new = (kl_m + kl_l).detach()
             # Compute MSE / RMSE
             mse_batched = ((train_input-output)**2).mean((1, 2, 3)).detach()
             rmse_batched = mse_batched.sqrt()
@@ -257,6 +258,12 @@ def main():
             # Heartbeat log
             diverged = float(elbo) > ELBO_DIV
             if iter_idx % config.report_loss_every == 0 or diverged:
+                # Save latest model
+                save_model = model.module if config.multi_gpu else model
+                save_checkpoint(
+                    f'{checkpoint_name}-latest', save_model, optimiser, beta,
+                    geco.err_ema if config.geco else None, iter_idx, False)
+
                 # Print output and write to file
                 ps = f'{config.run_name} | '
                 ps += f'[{iter_idx}/{config.train_iter:.0e}]'
@@ -313,20 +320,11 @@ def main():
             # Save checkpoints
             ckpt_freq = config.train_iter / config.num_checkpoints
             if iter_idx % ckpt_freq == 0:
-                ckpt_file = '{}-{}'.format(checkpoint_name, iter_idx)
-                fprint(f"Saving model training checkpoint to: {ckpt_file}")
-                if config.multi_gpu:
-                    model_state_dict = model.module.state_dict()
-                else:
-                    model_state_dict = model.state_dict()
-                ckpt_dict = {'iter_idx': iter_idx,
-                             'model_state_dict': model_state_dict,
-                             'optimiser_state_dict': optimiser.state_dict(),
-                             'elbo': elbo}
-                if config.geco:
-                    ckpt_dict['beta'] = geco.beta
-                    ckpt_dict['err_ema'] = geco.err_ema
-                torch.save(ckpt_dict, ckpt_file)
+                save_model = model.module if config.multi_gpu else model
+                save_checkpoint(
+                    f'{checkpoint_name}-{iter_idx}',
+                    save_model, optimiser,
+                    beta, geco.err_ema if config.geco else None, iter_idx)
 
             # Run validation and log images
             if (iter_idx % config.run_validation_every == 0 or
@@ -362,40 +360,53 @@ def main():
     # TESTING
     # ------------------------
 
+    eval_model = model.module if config.gpu and config.multi_gpu else model
+
     # Save final checkpoint
-    ckpt_file = '{}-{}'.format(checkpoint_name, 'FINAL')
-    fprint(f"Saving model training checkpoint to: {ckpt_file}")
-    if config.multi_gpu:
-        model_state_dict = model.module.state_dict()
-    else:
-        model_state_dict = model.state_dict()
-    ckpt_dict = {'iter_idx': iter_idx,
-                 'model_state_dict': model_state_dict,
-                 'optimiser_state_dict': optimiser.state_dict()}
-    if config.geco:
-        ckpt_dict['beta'] = geco.beta
-        ckpt_dict['err_ema'] = geco.err_ema
-    torch.save(ckpt_dict, ckpt_file)
+    fprint("SAVING FINAL MODEL CHECKPOINT...", True)
+    save_checkpoint(f'{checkpoint_name}-FINAL', eval_model, optimiser,
+                    beta, geco.err_ema if config.geco else None, iter_idx)
+    # Run validation on final model
+    fprint("RUNNING FINAL VALIDATION...", True)
+    final_val_stats = evaluation(eval_model, val_loader, None, config,
+                                 iter_idx, N_eval=config.N_eval,
+                                 N_seg_metrics=300)
+    fprint(f"FINAL VALIDATION STATS | {final_val_stats}", True)
 
     # Test evaluation
-    fprint("STARTING TESTING...")
-    eval_model = model.module if config.gpu and config.multi_gpu else model
-    test_stats = evaluation(
-        eval_model, test_loader, None, config, iter_idx, N_eval=config.N_eval)
-    fprint(f"TEST STATS | {test_stats}", True)
-
-    # FID computation
-    try:
-        fid_from_model(
-            model, test_loader,
-            batch_size=10 if not config.debug else 2,
-            num_images=10000 if not config.debug else 10,
-            img_dir=osp.join('/tmp', logdir))
-    except NotImplementedError:
-        fprint("Sampling not implemented for this model.")
+    if test_loader is not None:
+        fprint("STARTING TESTING...")
+        test_stats = evaluation(eval_model, test_loader, None, config,
+                                iter_idx, N_eval=config.N_eval,
+                                N_seg_metrics=300)
+        fprint(f"TEST STATS | {test_stats}", True)
+        # FID computation
+        try:
+            fid_from_model(
+                model, test_loader,
+                batch_size=10 if not config.debug else 2,
+                num_images=10000 if not config.debug else 10,
+                img_dir=osp.join('/tmp', logdir))
+        except NotImplementedError:
+            fprint("Sampling not implemented for this model.")
+    else:
+        fprint("No test loader available", True)
 
     # Close writer
     writer.close()
+
+
+def save_checkpoint(ckpt_file, model, optimiser, beta, geco_err_ema,
+                    iter_idx, verbose=True):
+    if verbose:
+        fprint(f"Saving model training checkpoint to: {ckpt_file}")
+    ckpt_dict = {'model_state_dict': model.state_dict(),
+                 'optimiser_state_dict': optimiser.state_dict(),
+                 'beta': beta,
+                 'iter_idx': iter_idx}
+    if geco_err_ema is not None:
+        ckpt_dict['err_ema'] = geco_err_ema
+    torch.save(ckpt_dict, ckpt_file)
 
 
 def visualise_outputs(model, vis_batch, writer, mode, iter_idx):
