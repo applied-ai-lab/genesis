@@ -94,6 +94,8 @@ python train.py --data_config datasets/multid_config.py --model_config models/ge
 ```
 See `train.py` and the config files for the available flags.
 
+**NOTE:** If you train MONet with the default config flags, then the hyperparameters from our ICLR paper are used which are different from the ones in Burgess et al.. If you want to use the training hyperparameters from Burgess et al., then you need to add the following flags: `--geco False --pixel_std1 0.09 --pixel_std2 0.11 --train_iter 1000000 --batch_size 64 --optimiser rmsprop`.
+
 #### Monitoring training
 TensorBoard logs are written to file with [TensorboardX](https://github.com/lanpa/tensorboardX). Run `tensorboard --logdir checkpoints` to monitor training.
 
