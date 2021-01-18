@@ -29,12 +29,12 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 
-def rand_rgb_tuble():
+def rand_rgb_tuple():
     val = [0, 63, 127, 191, 255]
     return choice(val), choice(val), choice(val)
 
 
-def generate(sprites, dataset_size, num_objects=None):
+def generate(sprites, dataset_size, num_objects=None, unique=False):
     # Initialise
     all_images = np.zeros((dataset_size, 64, 64, 3))
     all_instance_masks = np.zeros((dataset_size, 64, 64, 1))
@@ -45,9 +45,12 @@ def generate(sprites, dataset_size, num_objects=None):
             print(f"Processing [{i+1} | {dataset_size}]")
 
         # Create background
-        image = np.array(Image.new('RGB', (64, 64), rand_rgb_tuble()))
+        background_colour = rand_rgb_tuple()
+        image = np.array(Image.new('RGB', (64, 64), background_colour))
         # Initialise instance masks
         instance_masks = np.zeros((64, 64, 1)).astype('int')
+
+        img_colours = [background_colour]
 
         # Add objects
         if num_objects is None:
@@ -58,8 +61,13 @@ def generate(sprites, dataset_size, num_objects=None):
             object_index = randint(0, 737279)
             sprite_mask = np.array(sprites[object_index], dtype=bool)
             crop_index = np.where(sprite_mask == True)
-            image[crop_index] = rand_rgb_tuble()
+            object_colour = rand_rgb_tuple()
+            # Optional: get new random colour if colour has already been used
+            while unique and object_colour in img_colours:
+                object_colour = rand_rgb_tuple()
+            image[crop_index] = object_colour
             instance_masks[crop_index] = obj_idx + 1
+            img_colours.append(object_colour)
         # Collate
         all_images[i] = image
         all_instance_masks[i] = instance_masks
@@ -75,29 +83,58 @@ def main():
         encoding="latin1")
     sprites = dataset_zip['imgs']
 
-    # --- 1-4 objects ---
-
+    # --- Random colours ---
     # Generate training data
     print("Generate training images...")
     train_images, train_masks = generate(sprites, 50000)
     print("Saving...")
-    np.save("data/multi_dsprites/processed/training_images_rand4.npy", train_images)
-    np.save("data/multi_dsprites/processed/training_masks_rand4.npy", train_masks)
-
+    np.save("data/multi_dsprites/processed/training_images_rand4.npy",
+            train_images)
+    np.save("data/multi_dsprites/processed/training_masks_rand4.npy",
+            train_masks)
     # Generate validation data
     print("Generate validation images...")
     val_images, val_masks = generate(sprites, 10000)
     print("Saving...")
-    np.save("data/multi_dsprites/processed/validation_images_rand4.npy", val_images)
-    np.save("data/multi_dsprites/processed/validation_masks_rand4.npy", val_masks)
-
+    np.save("data/multi_dsprites/processed/validation_images_rand4.npy",
+            val_images)
+    np.save("data/multi_dsprites/processed/validation_masks_rand4.npy",
+            val_masks)
     # Generate test data
     print("Generate test images...")
     test_images, test_masks = generate(sprites, 10000)
     print("Saving...")
-    np.save("data/multi_dsprites/processed/test_images_rand4.npy", test_images)
-    np.save("data/multi_dsprites/processed/test_masks_rand4.npy", test_masks)
+    np.save("data/multi_dsprites/processed/test_images_rand4.npy",
+            test_images)
+    np.save("data/multi_dsprites/processed/test_masks_rand4.npy",
+            test_masks)
+    print("Done!")
 
+    # --- Unique random colours ---
+    # Generate training data
+    print("Generate training images...")
+    train_images, train_masks = generate(sprites, 50000, unique=True)
+    print("Saving...")
+    np.save("data/multi_dsprites/processed/training_images_rand4_unique.npy",
+            train_images)
+    np.save("data/multi_dsprites/processed/training_masks_rand4_unique.npy",
+            train_masks)
+    # Generate validation data
+    print("Generate validation images...")
+    val_images, val_masks = generate(sprites, 10000, unique=True)
+    print("Saving...")
+    np.save("data/multi_dsprites/processed/validation_images_rand4_unique.npy",
+            val_images)
+    np.save("data/multi_dsprites/processed/validation_masks_rand4_unique.npy",
+            val_masks)
+    # Generate test data
+    print("Generate test images...")
+    test_images, test_masks = generate(sprites, 10000, unique=True)
+    print("Saving...")
+    np.save("data/multi_dsprites/processed/test_images_rand4_unique.npy",
+            test_images)
+    np.save("data/multi_dsprites/processed/test_masks_rand4_unique.npy",
+            test_masks)
     print("Done!")
 
 

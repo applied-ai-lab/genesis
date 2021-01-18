@@ -36,6 +36,7 @@ mkdir -p data/multi_dsprites/processed
 git clone https://github.com/deepmind/dsprites-dataset.git data/multi_dsprites/dsprites-dataset
 python scripts/generate_multid.py
 ```
+**NOTE:** An RGB colour is sampled from 125 possible colours for each scene component. By default, multiple components in an image can have the same colour. This can lead, e.g., to a foreground object to have the same colour as the background so that the object is practically "invisible". A ground truth segmentation mask will still be associated with such an invisible object. If you want to avoid this, you can set `--unique_colours True` during training to use an alternative dataset where each component in an image has a unique colour.
 
 ### GQN (rooms-ring-camera)
 The [GQN datasets](https://github.com/deepmind/gqn-datasets) are quite large. The `rooms_ring_camera` dataset as used in the paper takes about 250GB and can be downloaded with:

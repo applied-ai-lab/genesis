@@ -27,11 +27,11 @@ from utils.misc import loader_throughput
 
 flags.DEFINE_string('data_folder', 'data/multi_dsprites/processed',
                     'Path to data folder.')
-
+flags.DEFINE_boolean('unique_colours', False, 'Dataset with unique colours.')
 flags.DEFINE_boolean('load_instances', True, 'Load instances.')
-
 flags.DEFINE_integer('img_size', 64,
                      'Dimension of images. Images are square.')
+
 flags.DEFINE_integer('num_workers', 4,
                      'Number of threads for loading data.')
 flags.DEFINE_boolean('mem_map', False, 'Use memory mapping.')
@@ -52,10 +52,18 @@ def load(cfg, **unused_kwargs):
         raise Exception("Data folder does not exist.")
     print(f"Using {cfg.num_workers} data workers.")
 
+    if not hasattr(cfg, 'unique_colours'):
+        cfg.unique_colours = False
+
     # Paths
-    train_path = 'training_images_rand4.npy'
-    val_path = 'validation_images_rand4.npy'
-    test_path = 'test_images_rand4.npy'
+    if cfg.unique_colours:    
+        train_path = 'training_images_rand4_unique.npy'
+        val_path = 'validation_images_rand4_unique.npy'
+        test_path = 'test_images_rand4_unique.npy'
+    else:
+        train_path = 'training_images_rand4.npy'
+        val_path = 'validation_images_rand4.npy'
+        test_path = 'test_images_rand4.npy'
 
     # Training
     train_dataset = dSpritesDataset(os.path.join(cfg.data_folder, train_path),
