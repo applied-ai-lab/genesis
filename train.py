@@ -145,7 +145,12 @@ def main():
 
     # Load model
     model = fet.load(config.model_config, config)
+    if config.multi_gpu:
+        fprint("Wrapping model in DataParallel.")
+        model = nn.DataParallel(model)
     fprint(model)
+
+    # Optional: Configure GECO
     if config.geco:
         # Goal is specified per pixel & channel so it doesn't need to
         # be changed for different resolutions etc.
@@ -173,31 +178,26 @@ def main():
         if osp.exists(latest_checkpoint):
             resume_checkpoint = latest_checkpoint
         fprint(f"Restoring checkpoint from {resume_checkpoint}")
-        checkpoint = torch.load(resume_checkpoint, map_location='cpu')
-        # Restore model & optimiser
+        checkpoint = torch.load(resume_checkpoint,
+                                map_location=None if config.gpu else 'cpu')
+        # Restore model
         model_state_dict = checkpoint['model_state_dict']
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_1', None)
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_2', None)
         model.load_state_dict(model_state_dict)
+        # Restore optimiser
         optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-        # Restore GECO
-        if config.geco and 'beta' in checkpoint:
-            geco.beta = checkpoint['beta']
-        if config.geco and 'err_ema' in checkpoint:
-            geco.err_ema = checkpoint['err_ema']
+        # Optional: Restore GECO
+        if config.geco:
+            if 'beta' in checkpoint:
+                geco.beta = checkpoint['beta']
+            if 'err_ema' in checkpoint:
+                geco.err_ema = checkpoint['err_ema']
+            if config.gpu:
+                geco.cuda()
         # Update starting iter
         iter_idx = checkpoint['iter_idx'] + 1
     fprint(f"Starting training at iter = {iter_idx}")
-
-    # Push model to GPU(s)?
-    if config.multi_gpu:
-        fprint("Wrapping model in DataParallel.")
-        model = nn.DataParallel(model)
-    if config.gpu:
-        fprint("Pushing model to GPU.")
-        model = model.cuda()
-        if config.geco:
-            geco.to_cuda()
 
     # ------------------------
     # TRAINING
