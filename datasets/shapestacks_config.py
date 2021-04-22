@@ -143,9 +143,13 @@ class ShapeStacksDataset(Dataset):
         # --- Load instances ---
         if self.load_instances:
             file_split = file.split('/')
-            cam = file_split[4].split('-')[5][4:]
+            # cam = file_split[4].split('-')[5][4:]
+            # map_path = os.path.join(
+            #     self.data_dir, 'iseg', file_split[3],
+            #     'iseg-w=0-f=0-l=0-c=original-cam_' + cam + '-mono-0.map')
+            cam = file_split[-1].split('-')[5][4:]
             map_path = os.path.join(
-                self.data_dir, 'iseg', file_split[3],
+                self.data_dir, 'iseg', file_split[-2],
                 'iseg-w=0-f=0-l=0-c=original-cam_' + cam + '-mono-0.map')
             masks = load_segmap_as_matrix(map_path)
             masks = np.expand_dims(masks, 0)
