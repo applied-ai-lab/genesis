@@ -2,13 +2,15 @@
 
 This is the official PyTorch implementation of ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Adam R. Kosiorek](http://akosiorek.github.io/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/); published at the International Conference on Learning Representations (ICLR) 2020.
 
-Among other things, this includes:
+This repository also includes among other things:
 * code for reproducing ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/), [Oiwi Parker Jones](https://ori.ox.ac.uk/ori-people/oiwi-parker-jones/), and [Ingmar Posner](https://ori.ox.ac.uk/ori-people/ingmar-posner/) as presented at the Workshop on Object-Oriented Learning at ICML 2020;
 * a [re-implementation of MONet](https://github.com/applied-ai-lab/genesis/blob/master/models/monet_config.py) from ["MONet: Unsupervised Scene Decomposition and Representation"](https://arxiv.org/abs/1901.11390) by Burgess et al.;
 * a [re-implementation of GECO](https://github.com/applied-ai-lab/genesis/blob/master/utils/geco.py) from ["Taming VAEs"](https://arxiv.org/abs/1810.00597) by Rezende and Viola.
 
 ## Setup
-Start by cloning the repository, e.g. into `~/code/genesis`:
+
+### Dependencies
+Clone the repository into, e.g., `~/code/genesis`:
 ```shell
 git clone --recursive https://github.com/applied-ai-lab/genesis.git ~/code/genesis
 ```
@@ -23,12 +25,12 @@ conda env create -f environment.yml
 conda activate genesis_env
 ```
 
-## Datasets
+### Datasets
 This repository contains data loaders for the three datasets considered in the [ICLR paper](https://arxiv.org/abs/1907.13052).
 A few steps are required for setting up each individual dataset.
 We also provide a PyTorch wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi-object-datasets/) used for the experiments on the `Objects Room` dataset in the [ICML workshop paper](https://oolworkshop.github.io/program/ool_5.html).
 
-### Multi-dSprites
+#### Multi-dSprites
 Generate coloured Multi-dSprites from the original [dSprites dataset](https://github.com/deepmind/dsprites-dataset) with:
 ```shell
 cd ~/code/genesis
@@ -38,7 +40,7 @@ python scripts/generate_multid.py
 ```
 **NOTE:** An RGB colour is sampled from 125 possible colours for each scene component. By default, multiple components in an image can have the same colour. This can lead, e.g., to a foreground object to have the same colour as the background so that the object is practically "invisible". A ground truth segmentation mask will still be associated with such an invisible object. If you want to avoid this, you can set `--unique_colours True` during training to use an alternative dataset where each component in an image has a unique colour.
 
-### GQN (rooms-ring-camera)
+#### GQN (rooms-ring-camera)
 The [GQN datasets](https://github.com/deepmind/gqn-datasets) are quite large. The `rooms_ring_camera` dataset as used in the paper takes about 250GB and can be downloaded with:
 ```shell
 pip install gsutil
@@ -48,7 +50,7 @@ gsutil -m cp -r gs://gqn-dataset/rooms_ring_camera data/gqn_datasets
 ```
 Note that we use a modified version of the TensorFlow GQN data loader from [ogroth/tf-gqn](https://github.com/ogroth/tf-gqn) which is included in `third_party/tf_gqn`.
 
-### ShapeStacks
+#### ShapeStacks
 You need about 30GB of free disk space for [ShapeStacks](https://shapestacks.robots.ox.ac.uk/):
 ```shell
 # Download compressed dataset
@@ -62,7 +64,7 @@ cd -
 ```
 The instance segmentation labels for ShapeStacks can be downloaded from [here](https://drive.google.com/open?id=1KsSQCgb1JJExbKyrIkTwBL9VidGcq2k7).
 
-### Multi-Object Datasets
+#### Multi-Object Datasets
 The repository contains a wrapper around the [Multi-Object Datasets](https://github.com/deepmind/multi_object_datasets), returning an iterable which behaves similarly to a PyTorch DataLoader object.
 The default config assumes that any datasets you wish to use have been downloaded to `data/multi-object-datasets`.
 As for the GQN data, this can be done with gsutil.
@@ -72,17 +74,7 @@ mkdir -p data/multi-objects-datasets
 gsutil cp -r gs://multi-object-datasets data/multi-object-datasets
 ```
 
-## Experiments
-### Visualising data
-You can visualise your data with, e.g.:
-```shell
-python scripts/visualise_data.py --data_config datasets/multid_config.py
-python scripts/visualise_data.py --data_config datasets/gqn_config.py
-python scripts/visualise_data.py --data_config datasets/shapestacks_config.py
-python scripts/visualise_data.py --data_config datasets/multi_object_config.py --dataset objects_room
-```
-
-### Training models
+## Training
 You can train Genesis, MONet and baseline VAEs on the datasets using the default hyperparameters with, e.g.:
 ```shell
 python train.py --data_config datasets/multid_config.py --model_config models/genesis_config.py
@@ -95,13 +87,27 @@ python train.py --data_config datasets/multid_config.py --model_config models/ge
 ```
 See `train.py` and the config files for the available flags.
 
-**NOTE:** If you train MONet with the default config flags, then the hyperparameters from our ICLR paper are used which are different from the ones in Burgess et al.. If you want to use the training hyperparameters from Burgess et al., then you need to add the following flags: `--geco False --pixel_std1 0.09 --pixel_std2 0.11 --train_iter 1000000 --batch_size 64 --optimiser rmsprop`.
-
-#### Monitoring training
 TensorBoard logs are written to file with [TensorboardX](https://github.com/lanpa/tensorboardX). Run `tensorboard --logdir checkpoints` to monitor training.
 
-### Pretrained models
+**NOTE:** If you train MONet with the default config flags, then the hyperparameters from our ICLR paper are used which are different from the ones in Burgess et al.. If you want to use the training hyperparameters from Burgess et al., then you need to add the following flags: `--geco False --pixel_std1 0.09 --pixel_std2 0.11 --train_iter 1000000 --batch_size 64 --optimiser rmsprop`.
+
+## Evaluation
+See `scripts/compute_fid.py` and `scripts/compute_seg_metrics.py`.
+
+## Visualisation
+You can visualise your data with, e.g.:
+```shell
+python scripts/visualise_data.py --data_config datasets/multid_config.py
+python scripts/visualise_data.py --data_config datasets/gqn_config.py
+python scripts/visualise_data.py --data_config datasets/shapestacks_config.py
+python scripts/visualise_data.py --data_config datasets/multi_object_config.py --dataset objects_room
+```
+Scripts for visualising reconstructions/segmentations and samples are available at `scripts/visualise_reconstruction.py` and `scripts/visualise_generation.py`, respectively.
+
+## Pretrained models
 Models pretrained on the three datasets used in the ICLR paper are available [here](https://drive.google.com/file/d/1aFyAzMdscMe8_w_hbIz5A1Fb1gr8EBNG/view?usp=sharing).
+
+## Results
 
 Generation and segmentation metrics of the released model checkpoints are summarised in the following table with results from the ICLR paper included in parentheses:
 | Model | Dataset | FID | ARI | MSC |
@@ -110,13 +116,7 @@ Generation and segmentation metrics of the released model checkpoints are summar
 | GENESIS | GQN | 79.4 (80.5) | - | - |
 | GENESIS | ShapeStacks | 235.4 | 0.57 (0.73+-0.03) | 0.72 (0.60+-0.09) |
 
-**NOTE:** Results can sometimes vary considerably between individual runs. It is recommended to perform multiple runs with different random seeds to obtain a sense for model performance.
-
-### Evaluation metrics
-See `scripts/compute_fid.py` and `scripts/compute_seg_metrics.py`.
-
-### Visualise reconstruction & generation
-See `scripts/visualise_reconstruction.py` and `scripts/visualise_generation.py`.
+**NOTE:** Results can vary between individual runs. It is recommended to perform multiple runs with different random seeds to obtain a sense for model performance.
 
 ## Further particulars
 ### License
