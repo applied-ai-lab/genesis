@@ -39,7 +39,7 @@ flags.DEFINE_string('model_dir', 'checkpoints/test/1',
 flags.DEFINE_string('model_file', 'model.ckpt-FINAL', 'Name of model file.')
 # Other
 flags.DEFINE_integer('seed', 0, 'Seed for random number generators.')
-flags.DEFINE_integer('num_images', 300, 'Number of images to run on.')
+flags.DEFINE_integer('num_images', 320, 'Number of images to run on.')
 flags.DEFINE_string('split', 'test', '{train, val, test}')
 
 # Set manual seed
