@@ -77,25 +77,71 @@ mkdir -p data/multi-objects-datasets
 gsutil cp -r gs://multi-object-datasets data/multi-object-datasets
 ```
 
-## Training
-You can train Genesis, MONet and baseline VAEs on the datasets using the default hyperparameters with, e.g.:
+#### Sketchy
+Clone [deepmind-research](https://github.com/deepmind/deepmind-research) into, e.g., `code/deepmind-research`:
 ```shell
-python train.py --data_config datasets/multid_config.py --model_config models/genesis_config.py
-python train.py --data_config datasets/gqn_config.py --model_config models/monet_config.py
-python train.py --data_config datasets/shapestacks_config.py --model_config models/vae_config.py
+git clone https://github.com/deepmind/deepmind-research.git ~/code/deepmind-research
+```
+Download `lift_green__demos 2` and `stack_green_on_red__demos 2` using the script at `deepmind-research/sketchy/download.sh`.
+Put the data into `~/code/genesis/data/sketchy/records` with the contents of the folder being the actual tfrecord files.
+Make sure the `deepmind-research` is on your python path:
+```shell
+# If needed, replace .bashrc with .zshrc or similar
+echo 'export PYTHONPATH="${PYTHONPATH}:${HOME}/code/deepmind-research"' >> ~/.bashrc
+```
+Create a separate environment according to `deepmind-research/sketchy/requirements.txt`
+```shell
+# Leave current environment first if necessary
+conda deactivate
+conda create -n sketchy python=3.7
+conda activate sketchy
+pip install -r ~/code/deepmind-research/sketchy/requirements.txt
+# Some additional dependencies
+pip install torch==1.3.1 torchvision==0.4.2 tqdm pillow
+```
+You can now preprocess the data with:
+```shell
+python scripts/sketchy_preparation.py
+conda deactivate
+```
+
+#### MIT-Princeton 2016 Amazon Picking Challenge (APC)
+Dowload the "Object Segmentation Training Dataset" from the [team's website](http://apc.cs.princeton.edu) via the [download link](http://3dvision.princeton.edu/projects/2016/apc/downloads/training.zip) (ca. 130GB).
+Move the `training.zip` file into `~/code/genesis/data/apc` and unpack it.
+Preprocess the data by running:
+```shell
+python datasets/apc_config.py
+```
+
+## Training
+You can train Genesis-v2, Genesis, MONet and baseline VAEs on the datasets using the default hyperparameters with, e.g.:
+```shell
+python train.py --data_config datasets/shapestacks_config.py --model_config models/genesisv2_config.py
+python train.py --data_config datasets/gqn_config.py --model_config models/genesis_config.py
+python train.py --data_config datasets/multi_object_config.py --model_config models/monet_config.py
+python train.py --data_config datasets/multid_config.py --model_config models/vae_config.py
 ```
 You can change many of the hyperparameters via the Forge command line flags in the respective config files, e.g.:
 ```shell
 python train.py --data_config datasets/multid_config.py --model_config models/genesis_config.py --batch_size 64 --learning_rate 0.001
 ```
-See `train.py` and the config files for the available flags.
+See [train.py](https://github.com/applied-ai-lab/genesis/blob/master/train.py) and the config files for the available flags.
 
 TensorBoard logs are written to file with [TensorboardX](https://github.com/lanpa/tensorboardX). Run `tensorboard --logdir checkpoints` to monitor training.
 
-**NOTE:** If you train MONet with the default config flags, then the hyperparameters from our ICLR paper are used which are different from the ones in Burgess et al.. If you want to use the training hyperparameters from Burgess et al., then you need to add the following flags: `--geco False --pixel_std1 0.09 --pixel_std2 0.11 --train_iter 1000000 --batch_size 64 --optimiser rmsprop`.
+**NOTE 1:** If you train MONet with the default config flags, then the hyperparameters from our ICLR paper are used which are different from the ones in Burgess et al.. If you want to use the training hyperparameters from Burgess et al., then you need to add the following flags: `--geco False --pixel_std1 0.09 --pixel_std2 0.11 --train_iter 1000000 --batch_size 64 --optimiser rmsprop`.
+
+**NOTE 2:** The Sketchy results in the GENESIS-V2 paper use a different GECO goal than used in the other experiments. It is necessary to override the default value to reproduce these results, which can be done by adding `--g_goal 0.5645` as a training flag.
 
 ## Evaluation
-See `scripts/compute_fid.py` and `scripts/compute_seg_metrics.py`.
+To compute the FID score for a trained model you can run, e.g.:
+'''shell
+python scripts/compute_fid.py --data_config datasets/gqn_config.py --model_config models/genesis_config.py --model_dir checkpoints/MyModel/1 --model_file model.ckpt-FINAL
+'''
+Similarly, you can compute the segmentation metrics with, e.g.:
+'''shell
+python scripts/compute_seg_metrics.py --data_config datasets/gqn_config.py --model_config models/genesis_config.py --model_dir checkpoints/MyModel/1 --model_file model.ckpt-FINAL
+'''
 
 ## Visualisation
 You can visualise your data with, e.g.:
