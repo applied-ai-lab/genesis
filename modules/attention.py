@@ -142,7 +142,7 @@ class LatentSBP(SimpleSBP):
 
 class InstanceColouringSBP(nn.Module):
 
-    def __init__(self, img_size, kernel='laplacian',
+    def __init__(self, img_size, kernel='gaussian',
                  colour_dim=8, K_steps=None, feat_dim=None,
                  semiconv=True):
         super(InstanceColouringSBP, self).__init__()
