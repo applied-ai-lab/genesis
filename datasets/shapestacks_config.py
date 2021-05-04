@@ -95,7 +95,8 @@ def load(cfg, **unused_kwargs):
                             num_workers=1)
 
     # Throughput stats
-    loader_throughput(tng_loader)
+    if not cfg.debug:
+        loader_throughput(tng_loader)
 
     return (tng_loader, val_loader, tst_loader)
 

@@ -78,7 +78,8 @@ def load(cfg, **unused_kwargs):
     test_loader.sess = sess
 
     # Throughput stats
-    loader_throughput(train_loader)
+    if not cfg.debug:
+        loader_throughput(train_loader)
 
     return (train_loader, val_loader, test_loader)
 
