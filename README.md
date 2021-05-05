@@ -1,12 +1,19 @@
 # Genesis
 
-This is the official PyTorch implementation of
-> ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052);  
-> Martin Engelcke, Adam R. Kosiorek, Oiwi Parker Jones, and Ingmar Posner;  
-> International Conference on Learning Representations (ICLR) 2020.
+This is the official PyTorch reference implementation of:
+> ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052)  
+> Martin Engelcke, Adam R. Kosiorek, Oiwi Parker Jones, and Ingmar Posner  
+> International Conference on Learning Representations (ICLR), 2020
 
-This repository also includes among other things:
-* code for reproducing ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html) by Martin Engelcke, Oiwi Parker Jones, and Ingmar Posner as presented at the Workshop on Object-Oriented Learning at ICML 2020;
+> ["Reconstruction Bottlenecks in Object-Centric Generative Models"](https://oolworkshop.github.io/program/ool_5.html)  
+> Martin Engelcke, Oiwi Parker Jones, and Ingmar Posner  
+> Workshop on Object-Oriented Learning at ICML, 2020
+
+> ["GENESIS-V2: Inferring Unordered Object Representations without Iterative Refinement"](https://arxiv.org/abs/2104.09958v2)  
+> Martin Engelcke, Oiwi Parker Jones, and Ingmar Posner  
+> arXiv preprint arXiv:2104.09958, 2021
+
+As part of these works, the repository also includes:
 * a [re-implementation of MONet](https://github.com/applied-ai-lab/genesis/blob/master/models/monet_config.py) from ["MONet: Unsupervised Scene Decomposition and Representation"](https://arxiv.org/abs/1901.11390) by Burgess et al.;
 * a [re-implementation of GECO](https://github.com/applied-ai-lab/genesis/blob/master/utils/geco.py) from ["Taming VAEs"](https://arxiv.org/abs/1810.00597) by Rezende and Viola.
 
@@ -179,13 +186,25 @@ Authors: Applied AI Lab, Oxford Robotics Institute, University of Oxford, https:
 No warranty, explicit or implicit, provided.
 
 ### Citation
-If you use this repository in your research, please cite our ICLR paper:
+If you make use of this code in your research, we would appreciate if you considered citing the most appropriate of the three papers:
 ```
-@article{engelcke2020genesis,
-  title={{GENESIS: Generative Scene Inference and Sampling of Object-Centric Latent Representations}},
-  author={Engelcke, Martin and Kosiorek, Adam R. and Parker Jones, Oiwi and Posner, Ingmar},
-  journal={International Conference on Learning Representations (ICLR)},
+@inproceedings{engelcke2020genesis,
+  title={{GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations}},
+  author={Engelcke, Martin and Kosiorek, Adam R and Parker Jones, Oiwi and Posner, Ingmar},
+  booktitle={International Conference on Learning Representations (ICLR)},
   year={2020}
+}
+@article{engelcke2020reconstruction,
+	title={{Reconstruction Bottlenecks in Object-Centric Generative Models}},
+	author={Engelcke, Martin and Parker Jones, Oiwi and Posner, Ingmar},
+	journal={ICML Workshop on Object-Oriented Learning},
+	year={2020}
+}
+@article{engelcke2021genesisv2,
+	title={{GENESIS-V2: Inferring Unordered Object Representations without Iterative Refinement}},
+	author={Engelcke, Martin and Parker Jones, Oiwi and Posner, Ingmar},
+	journal={arXiv preprint arXiv:2104.09958},
+	year={2021}
 }
 ```
 
