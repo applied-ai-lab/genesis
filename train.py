@@ -194,7 +194,7 @@ def main():
             if 'err_ema' in checkpoint:
                 geco.err_ema = checkpoint['err_ema']
             if config.gpu:
-                geco.cuda()
+                geco.to_cuda()
         # Update starting iter
         iter_idx = checkpoint['iter_idx'] + 1
     fprint(f"Starting training at iter = {iter_idx}")
