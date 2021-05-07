@@ -128,8 +128,12 @@ class APCDataset(Dataset):
         fp = self.image_paths[idx]
         img = self.transform(Image.open(fp))
         mfp= fp.replace('frame', 'masks/frame').replace('color', 'mask')
-        mask = self.transform(Image.open(mfp)).long()
-        return {'images': img, 'instances': mask}
+        try:
+            mfp= fp.replace('frame', 'masks/frame').replace('color', 'mask')
+            mask = self.transform(Image.open(mfp)).long()
+        except FileNotFoundError:
+            mask = torch.zeros_like(img[:1, :, :]).long()
+        return {'input': img, 'instances': mask}
 
 
 def preprocess(data_folder='data/apc', img_size=128):

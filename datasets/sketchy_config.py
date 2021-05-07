@@ -89,4 +89,4 @@ class SketchyDataset(Dataset):
     def __getitem__(self, idx):
         file = self.filenames[idx]
         img = Image.open(file)
-        return {'images': transforms.functional.to_tensor(img)}
+        return {'input': transforms.functional.to_tensor(img)}
