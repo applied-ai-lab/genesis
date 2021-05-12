@@ -80,8 +80,7 @@ The default config assumes that any datasets you wish to use have been downloade
 As for the GQN data, this can be done with gsutil.
 You can download all four datasets at once with:
 ```shell
-mkdir -p data/multi-objects-datasets
-gsutil cp -r gs://multi-object-datasets data/multi-object-datasets
+gsutil cp -r gs://multi-object-datasets data/
 ```
 
 #### Sketchy
