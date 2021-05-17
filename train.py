@@ -505,22 +505,33 @@ def evaluation(model, data_loader, writer, config, iter_idx,
         eval_stats['elbo'].append(losses.err.mean(0) + kl_m + kl_l)
 
         # Track segmentation metrics metrics
-        if      ('instances' in batch and 'log_m_k' in stats and
-                 b_idx*batch_size < N_seg_metrics):
-            # ARI
-            new_ari, _ = average_ari(
-                stats.log_m_k, batch['instances'])
-            new_ari_fg, _ = average_ari(
-                stats.log_m_k, batch['instances'], True)
-            eval_stats['ari'].append(new_ari)
-            eval_stats['ari_fg'].append(new_ari_fg)
-            # Segmentation Covering
-            iseg = torch.argmax(torch.cat(stats.log_m_k, 1), 1, True)
-            msc, _ = average_segcover(batch['instances'], iseg)
-            msc_fg, _ = average_segcover(batch['instances'], iseg,
-                                         ignore_background=True)
-            eval_stats['msc'].append(msc)
-            eval_stats['msc_fg'].append(msc_fg)
+        if 'instances' in batch and b_idx*batch_size < N_seg_metrics:
+            for mode in ['log_m_k', 'log_m_r_k']:
+                if mode == 'log_m_k':
+                    log_masks = stats.log_m_k
+                elif mode == 'log_m_r_k':
+                    log_masks = stats.log_m_r_k
+                else:
+                    continue
+                # ARI
+                new_ari, _ = average_ari(log_masks, batch['instances'])
+                new_ari_fg, _ = average_ari(log_masks, batch['instances'], True)
+                # Segmentation Covering
+                ins_seg = torch.argmax(torch.cat(log_masks, 1), 1, True)
+                msc, _ = average_segcover(batch['instances'], ins_seg)
+                msc_fg, _ = average_segcover(batch['instances'], ins_seg,
+                                             ignore_background=True)
+                # Track metrics
+                if mode == 'log_m_k':
+                    eval_stats['ari'].append(new_ari)
+                    eval_stats['ari_fg'].append(new_ari_fg)
+                    eval_stats['msc'].append(msc)
+                    eval_stats['msc_fg'].append(msc_fg)
+                elif mode == 'log_m_r_k':
+                    eval_stats['ari_r'].append(new_ari)
+                    eval_stats['ari_fg_r'].append(new_ari_fg)
+                    eval_stats['msc_r'].append(msc)
+                    eval_stats['msc_fg_r'].append(msc_fg)
 
     # Sum over batches
     for key, val in eval_stats.items():

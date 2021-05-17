@@ -56,6 +56,7 @@ def main():
     config = forge.config()
     config.batch_size = 1
     config.load_instances = True
+    config.debug = False
     fet.print_flags()
 
     # Restore original model flags
@@ -99,23 +100,37 @@ def main():
 
     # Compute metrics
     model.eval()
-    ari_fg_list, sc_fg_list, msc_fg_list = [], [], []
+    ari_fg_list, msc_fg_list, ari_fg_r_list, msc_fg_r_list = [], [], [], []
     with torch.no_grad():
         for i, x in enumerate(tqdm(prefetched_batches)):
             _, _, stats, _, _ = model(x['input'])
-            # ARI
-            ari_fg, _ = average_ari(stats.log_m_k, x['instances'],
-                                    foreground_only=True)
-            # Segmentation covering - foreground only
-            iseg = torch.argmax(torch.cat(stats.log_m_k, 1), 1, True)
-            msc_fg, _ = average_segcover(x['instances'], iseg, True)
-            # Recording
-            ari_fg_list.append(ari_fg)
-            msc_fg_list.append(msc_fg)
+            for mode in ['log_m_k', 'log_m_r_k']:
+                if mode == 'log_m_k':
+                    log_masks = stats.log_m_k
+                elif mode == 'log_m_r_k':
+                    log_masks = stats.log_m_r_k
+                else:
+                    continue
+                # ARI
+                ari_fg, _ = average_ari(log_masks, x['instances'],
+                                        foreground_only=True)
+                # Segmentation covering - foreground only
+                ins_seg = torch.argmax(torch.cat(log_masks, 1), 1, True)
+                msc_fg, _ = average_segcover(x['instances'], ins_seg, True)
+                # Recording
+                if mode == 'log_m_k':
+                    ari_fg_list.append(ari_fg)
+                    msc_fg_list.append(msc_fg)
+                elif mode == 'log_m_r_k':
+                    ari_fg_r_list.append(ari_fg)
+                    msc_fg_r_list.append(msc_fg)
 
     # Print average metrics
     fprint(f"Average FG ARI: {sum(ari_fg_list)/len(ari_fg_list)}")
     fprint(f"Average FG MSC: {sum(msc_fg_list)/len(msc_fg_list)}")
+    if len(ari_fg_r_list) > 0 and len(msc_fg_r_list) > 0:
+        fprint(f"Average FG-R ARI: {sum(ari_fg_r_list)/len(ari_fg_r_list)}")
+        fprint(f"Average FG-R MSC: {sum(msc_fg_r_list)/len(msc_fg_r_list)}")
 
 
 if __name__ == "__main__":
