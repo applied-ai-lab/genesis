@@ -243,8 +243,8 @@ def main():
 
             # Main objective
             if config.geco:
-                loss = geco.loss(err, kl_l + kl_m)
                 beta = geco.beta
+                loss = geco.loss(err, kl_l + kl_m)
             else:
                 if config.beta_warmup:
                     # Increase beta linearly over 20% of training
@@ -339,14 +339,14 @@ def main():
                                              iter_idx)
                         writer.add_histogram(f'grads/{name}', param.grad,
                                              iter_idx)
-                # Visualise model outputs
-                visualise_outputs(model, train_batch, writer, 'train', iter_idx)
                 # Log validation metrics
                 fprint("Running validation...")
                 eval_model = model.module if config.multi_gpu else model
                 val_stats = evaluation(eval_model, val_loader, writer, config,
                                        iter_idx, N_eval=config.N_eval)
                 fprint(f"VALIDATON STATS: {val_stats}")
+                # Visualise model outputs
+                visualise_outputs(model, train_batch, writer, 'train', iter_idx)
 
             # Increment counter
             iter_idx += 1
@@ -477,7 +477,7 @@ def evaluation(model, data_loader, writer, config, iter_idx,
     batch_size = data_loader.batch_size
 
     if iter_idx == 0 or config.debug:
-        num_batches = 1
+        num_batches = 5
         fprint(f"ITER 0 / DEBUG - eval on {num_batches} batches", True)
     elif N_eval is not None and N_eval <= len(data_loader)*batch_size:
         num_batches = int(N_eval // batch_size)
