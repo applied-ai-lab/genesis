@@ -33,7 +33,8 @@ import forge.experiment_tools as fet
 from forge.experiment_tools import fprint
 
 from utils.geco import GECO
-from utils.misc import average_ari, average_segcover, log_scalars
+from utils.misc import average_ari, average_segcover
+from utils.misc import log_scalars, colour_seg_masks
 from scripts.compute_fid import fid_from_model
 
 
@@ -424,6 +425,22 @@ def visualise_outputs(model, vis_batch, writer, mode, iter_idx):
     # Input and recon
     writer.add_image(mode+'_input', make_grid(vis_batch['input'][:8]), iter_idx)
     writer.add_image(mode+'_recon', make_grid(output), iter_idx)
+    # Instance segmentations
+    if 'instances' in vis_batch:
+        grid = make_grid(colour_seg_masks(vis_batch['instances'][:8]))
+        writer.add_image(mode+'_instances_gt', grid, iter_idx)
+    # Segmentation predictions
+    for field in ['log_m_k', 'log_m_r_k']:
+        if field in stats:
+            log_masks = stats[field]
+        else:
+            continue
+        ins_seg = torch.argmax(torch.cat(log_masks, 1), 1, True)
+        grid = make_grid(colour_seg_masks(ins_seg))
+        if field == 'log_m_k':
+            writer.add_image(mode+'_instances', grid, iter_idx)
+        elif field == 'log_m_r_k':
+            writer.add_image(mode+'_instances_r', grid, iter_idx)
     # Decomposition
     for key in ['mx_r_k', 'x_r_k', 'log_m_k', 'log_m_r_k']:
         if key not in stats:
@@ -506,7 +523,7 @@ def evaluation(model, data_loader, writer, config, iter_idx,
             kl_l = losses.kl_l.mean(0)
         eval_stats['elbo'].append(losses.err.mean(0) + kl_m + kl_l)
 
-        # Track segmentation metrics metrics
+        # Track segmentation metrics
         if 'instances' in batch and b_idx*batch_size < N_seg_metrics:
             for mode in ['log_m_k', 'log_m_r_k']:
                 if mode in stats:
