@@ -31,14 +31,13 @@ class SimpleSBP(nn.Module):
     def forward(self, x, steps_to_run):
         # Initialise lists to store tensors over K steps
         log_m_k = []
-        stats_k = []
         # Set initial scope to all ones, so log scope is all zeros
         log_s_k = [torch.zeros_like(x)[:, :1, :, :]]
         # Loop over steps
         for step in range(steps_to_run):
             # Compute mask and update scope. Last step is different
             # Compute a_logits given input and current scope
-            core_out, stats = self.core(torch.cat((x, log_s_k[step]), dim=1))
+            core_out, _ = self.core(torch.cat((x, log_s_k[step]), dim=1))
             # Take first channel as logits for masks
             a_logits = core_out[:, :1, :, :]
             log_a = F.logsigmoid(a_logits)
@@ -47,15 +46,9 @@ class SimpleSBP(nn.Module):
             log_m_k.append(log_s_k[step] + log_a)
             # Update scope given attentikon
             log_s_k.append(log_s_k[step] + log_neg_a)
-            # Track stats
-            stats_k.append(stats)
         # Set mask equal to scope for last step
         log_m_k.append(log_s_k[-1])
-        # Convert list of dicts into dict of lists
-        stats = AttrDict()
-        for key in stats_k[0]:
-            stats[key+'_k'] = [s[key] for s in stats_k]
-        return log_m_k, log_s_k, stats
+        return log_m_k, log_s_k, {}
 
     def masks_from_zm_k(self, zm_k, img_size):
         # zm_k: K*(batch_size, ldim)
