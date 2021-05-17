@@ -509,10 +509,8 @@ def evaluation(model, data_loader, writer, config, iter_idx,
         # Track segmentation metrics metrics
         if 'instances' in batch and b_idx*batch_size < N_seg_metrics:
             for mode in ['log_m_k', 'log_m_r_k']:
-                if mode == 'log_m_k':
-                    log_masks = stats.log_m_k
-                elif mode == 'log_m_r_k':
-                    log_masks = stats.log_m_r_k
+                if mode in stats:
+                    log_masks = stats[mode]
                 else:
                     continue
                 # ARI

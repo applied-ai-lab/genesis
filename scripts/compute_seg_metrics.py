@@ -105,10 +105,8 @@ def main():
         for i, x in enumerate(tqdm(prefetched_batches)):
             _, _, stats, _, _ = model(x['input'])
             for mode in ['log_m_k', 'log_m_r_k']:
-                if mode == 'log_m_k':
-                    log_masks = stats.log_m_k
-                elif mode == 'log_m_r_k':
-                    log_masks = stats.log_m_r_k
+                if mode in stats:
+                    log_masks = stats[mode]
                 else:
                     continue
                 # ARI
