@@ -55,8 +55,10 @@ def main_flags():
                         'Name of this job and name of results folder.')
     flags.DEFINE_integer('report_loss_every', 1000,
                          'Number of iterations between reporting minibatch loss.')
-    flags.DEFINE_integer('run_validation_every', 25000,
+    flags.DEFINE_integer('run_validation_every', 5000,
                          'How many equally spaced validation runs to do.')
+    flags.DEFINE_integer('log_images_every', 25000,
+                         'How often to log images to TensorBoard.')
     flags.DEFINE_integer('num_checkpoints', 4,
                          'How many equally spaced model checkpoints to save.')
     flags.DEFINE_boolean('resume', False, 'Tries to resume a job if True.')
@@ -329,7 +331,7 @@ def main():
                     save_model, optimiser,
                     beta, geco.err_ema if config.geco else None, iter_idx)
 
-            # Run validation and log images
+            # Run validation
             if (iter_idx % config.run_validation_every == 0 or
                     float(elbo) > ELBO_DIV):
                 # Weight and gradient histograms
@@ -345,8 +347,11 @@ def main():
                 val_stats = evaluation(eval_model, val_loader, writer, config,
                                        iter_idx, N_eval=config.N_eval)
                 fprint(f"VALIDATON STATS: {val_stats}")
-                # Visualise model outputs
+            
+            # Visualise model outputs
+            if iter_idx % config.log_images_every == 0:
                 visualise_outputs(model, train_batch, writer, 'train', iter_idx)
+                fprint("Logged images to TensorBoard")
 
             # Increment counter
             iter_idx += 1
