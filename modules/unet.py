@@ -63,10 +63,7 @@ class UNet(nn.Module):
             nn.Linear(128, 128), nn.ReLU(),
             nn.Linear(128, 2*c*self.featuremap_size**2), nn.ReLU()
         )
-        if out_chnls > 0:
-            self.final_conv = nn.Conv2d(c, out_chnls, 1)
-        else:
-            self.final_conv = nn.Identity()
+        self.final_conv = nn.Conv2d(c, out_chnls, 1)
         self.out_chnls = out_chnls
 
     def forward(self, x):

@@ -64,8 +64,9 @@ class GenesisV2(nn.Module):
             img_size=cfg.img_size,
             filter_start=min(cfg.feat_dim, 64),
             in_chnls=3,
-            out_chnls=-1,
+            out_chnls=cfg.feat_dim,
             norm='gn')
+        self.encoder.final_conv = nn.Identity()
         self.att_process = attention.InstanceColouringSBP(
             img_size=cfg.img_size,
             kernel=cfg.kernel,
