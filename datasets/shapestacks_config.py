@@ -80,7 +80,7 @@ def load(cfg, **unused_kwargs):
                                  cfg.load_instances)
     val_loader = DataLoader(val_set,
                             batch_size=cfg.batch_size,
-                            shuffle=False,
+                            shuffle=True,
                             num_workers=cfg.num_workers)
     # Test
     tst_set = ShapeStacksDataset(cfg.data_folder,

@@ -81,7 +81,7 @@ def load(cfg, **unused_kwargs):
                                   cfg.mem_map)
     val_loader = DataLoader(val_dataset,
                             batch_size=cfg.batch_size,
-                            shuffle=False,
+                            shuffle=True,
                             num_workers=cfg.num_workers)
     # Test
     test_dataset = dSpritesDataset(os.path.join(cfg.data_folder, test_path),
