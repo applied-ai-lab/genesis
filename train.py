@@ -14,6 +14,7 @@
 import sys
 from os import path as osp
 import time
+import random
 import simplejson as json
 from attrdict import AttrDefault
 
@@ -104,6 +105,7 @@ def main():
     # Fix seeds. Always first thing to be done after parsing the config!
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
+    random.seed(config.seed)
     # Make CUDA operations deterministic
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
