@@ -187,6 +187,7 @@ def main():
                                 map_location=None if config.gpu else 'cpu')
         # Restore model
         model_state_dict = checkpoint['model_state_dict']
+        # Remove unnecessary items for backwards compatibility with older models
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_1', None)
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_2', None)
         model.load_state_dict(model_state_dict)
