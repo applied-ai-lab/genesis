@@ -20,7 +20,7 @@ from torch.distributions.normal import Normal
 from forge import flags
 
 import modules.blocks as B
-import modules.seq_att as seq_att
+import modules.attention as attention
 import modules.decoders as decoders
 from modules.component_vae import ComponentVAE
 
@@ -93,7 +93,7 @@ class Genesis(nn.Module):
         # - Attention process
         if self.K_steps > 1:
             self.att_steps = self.K_steps
-            self.att_process = seq_att.LatentSBP(att_core)
+            self.att_process = attention.LatentSBP(att_core)
         # - Component VAE
         if self.two_stage:
             self.comp_vae = ComponentVAE(
@@ -191,10 +191,10 @@ class Genesis(nn.Module):
 
         # --- Loss terms ---
         losses = AttrDict()
-        
+
         # -- Reconstruction loss
         losses['err'] = self.x_loss(x, log_m_k, x_r_k, self.std)
-        
+
         # -- Attention mask KL
         if self.K_steps > 1:
             # Using normalising flow, arbitrary posterior
@@ -225,7 +225,7 @@ class Genesis(nn.Module):
                     assert len(ldj_k) == self.K_steps
         else:
             losses['kl_m'] = torch.tensor(0.)
-        
+
         # -- Component KL
         if self.two_stage:
             losses['kl_l_k'] = []
@@ -286,11 +286,13 @@ class Genesis(nn.Module):
             return err_ppc.sum(dim=(1, 2, 3))
 
     @staticmethod
-    def mask_latent_loss(q_zm_0_k, zm_0_k, zm_k_k, ldj_k,
+    def mask_latent_loss(q_zm_0_k, zm_0_k, zm_k_k=None, ldj_k=None,
                          prior_lstm=None, prior_linear=None, debug=False):
-        num_steps = len(zm_k_k)
-        batch_size = zm_k_k[0].size(0)
-        latent_dim = zm_k_k[0].size(1)
+        num_steps = len(zm_0_k)
+        batch_size = zm_0_k[0].size(0)
+        latent_dim = zm_0_k[0].size(1)
+        if zm_k_k is None:
+            zm_k_k = zm_0_k
 
         # -- Determine prior --
         if prior_lstm is not None and prior_linear is not None:
@@ -350,7 +352,7 @@ class Genesis(nn.Module):
             zm_k = [Normal(0, 1).sample([batch_size, self.ldim])]
             state = None
             for k in range(1, self.att_steps):
-                # TODO(martin) reuse code from forward method?
+                # TODO(martin): reuse code from forward method?
                 lstm_out, state = self.prior_lstm(
                     zm_k[-1].view(1, batch_size, -1), state)
                 linear_out = self.prior_linear(lstm_out)
@@ -392,9 +394,6 @@ class Genesis(nn.Module):
                     mu = torch.tanh(mlp_out[0])
                     sigma = B.to_prior_sigma(mlp_out[1])
                     zc_k.append(Normal(mu, sigma).sample())
-                # if not self.softmax_attention:
-                #     zc_k.append(Normal(0, 1).sample(
-                #         [batch_size, self.comp_vae.ldim]))
             else:
                 zc_k = [Normal(0, 1).sample([batch_size, self.comp_vae.ldim])
                         for _ in range(K_steps)]

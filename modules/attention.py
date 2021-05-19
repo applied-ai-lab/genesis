@@ -17,6 +17,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import numpy as np
+
 from modules import blocks as B
 
 
@@ -29,14 +31,13 @@ class SimpleSBP(nn.Module):
     def forward(self, x, steps_to_run):
         # Initialise lists to store tensors over K steps
         log_m_k = []
-        stats_k = []
         # Set initial scope to all ones, so log scope is all zeros
         log_s_k = [torch.zeros_like(x)[:, :1, :, :]]
         # Loop over steps
         for step in range(steps_to_run):
             # Compute mask and update scope. Last step is different
             # Compute a_logits given input and current scope
-            core_out, stats = self.core(torch.cat((x, log_s_k[step]), dim=1))
+            core_out, _ = self.core(torch.cat((x, log_s_k[step]), dim=1))
             # Take first channel as logits for masks
             a_logits = core_out[:, :1, :, :]
             log_a = F.logsigmoid(a_logits)
@@ -45,15 +46,9 @@ class SimpleSBP(nn.Module):
             log_m_k.append(log_s_k[step] + log_a)
             # Update scope given attentikon
             log_s_k.append(log_s_k[step] + log_neg_a)
-            # Track stats
-            stats_k.append(stats)
         # Set mask equal to scope for last step
         log_m_k.append(log_s_k[-1])
-        # Convert list of dicts into dict of lists
-        stats = AttrDict()
-        for key in stats_k[0]:
-            stats[key+'_k'] = [s[key] for s in stats_k]
-        return log_m_k, log_s_k, stats
+        return log_m_k, log_s_k, {}
 
     def masks_from_zm_k(self, zm_k, img_size):
         # zm_k: K*(batch_size, ldim)
@@ -135,4 +130,97 @@ class LatentSBP(SimpleSBP):
         stats = AttrDict()
         for key in stats_k[0]:
             stats[key+'_k'] = [s[key] for s in stats_k]
+        return log_m_k, log_s_k, stats
+
+
+class InstanceColouringSBP(nn.Module):
+
+    def __init__(self, img_size, kernel='gaussian',
+                 colour_dim=8, K_steps=None, feat_dim=None,
+                 semiconv=True):
+        super(InstanceColouringSBP, self).__init__()
+        # Config
+        self.img_size = img_size
+        self.kernel = kernel
+        self.colour_dim = colour_dim
+        # Initialise kernel sigma
+        if self.kernel == 'laplacian':
+            sigma_init = 1.0 / (np.sqrt(K_steps)*np.log(2))
+        elif self.kernel == 'gaussian':
+            sigma_init = 1.0 / (K_steps*np.log(2))
+        elif self.kernel == 'epanechnikov':
+            sigma_init = 2.0 / K_steps
+        else:
+            return ValueError("No valid kernel.")
+        self.log_sigma = nn.Parameter(torch.tensor(sigma_init).log())
+        # Colour head
+        if semiconv:
+            self.colour_head = B.SemiConv(feat_dim, self.colour_dim, img_size)
+        else:
+            self.colour_head = nn.Conv2d(feat_dim, self.colour_dim, 1)
+
+    def forward(self, features, steps_to_run, debug=False,
+                dynamic_K=False, *args, **kwargs):
+        batch_size = features.size(0)
+        stats = AttrDict()
+        if isinstance(features, tuple):
+            features = features[0]
+        if dynamic_K:
+            assert batch_size == 1
+        # Get colours
+        colour_out = self.colour_head(features)
+        if isinstance(colour_out, tuple):
+            colour, delta = colour_out
+        else:
+            colour, delta = colour_out, None
+        # Sample from uniform to select random pixels as seeds
+        rand_pixel = torch.empty(batch_size, 1, *colour.shape[2:])
+        rand_pixel = rand_pixel.uniform_()
+        # Run SBP
+        seed_list = []
+        log_m_k = []
+        log_s_k = [torch.zeros(batch_size, 1, self.img_size, self.img_size)]
+        for step in range(steps_to_run):
+            # Determine seed
+            scope = F.interpolate(log_s_k[step].exp(), size=colour.shape[2:],
+                                  mode='bilinear', align_corners=False)
+            pixel_probs = rand_pixel * scope
+            rand_max = pixel_probs.flatten(2).argmax(2).flatten()
+            # TODO(martin): parallelise this
+            seed = torch.empty((batch_size, self.colour_dim))
+            for bidx in range(batch_size):
+                seed[bidx, :] = colour.flatten(2)[bidx, :, rand_max[bidx]]
+            seed_list.append(seed)
+            # Compute masks
+            if self.kernel == 'laplacian':
+                distance = B.euclidian_distance(colour, seed)
+                alpha = torch.exp(- distance / self.log_sigma.exp())
+            elif self.kernel == 'gaussian':
+                distance = B.squared_distance(colour, seed)
+                alpha = torch.exp(- distance / self.log_sigma.exp())
+            elif self.kernel == 'epanechnikov':
+                distance = B.squared_distance(colour, seed)
+                alpha = (1 - distance / self.log_sigma.exp()).relu()
+            else:
+                raise ValueError("No valid kernel.")
+            alpha = alpha.unsqueeze(1)
+            # Sanity checks
+            if debug:
+                assert alpha.max() <= 1, alpha.max()
+                assert alpha.min() >= 0, alpha.min()
+            # Clamp mask values to [0.01, 0.99] for numerical stability
+            # TODO(martin): clamp less aggressively?
+            alpha = B.clamp_preserve_gradients(alpha, 0.01, 0.99)
+            # SBP update
+            log_a = torch.log(alpha)
+            log_neg_a = torch.log(1 - alpha)
+            log_m = log_s_k[step] + log_a
+            if dynamic_K and log_m.exp().sum() < 20:
+                break
+            log_m_k.append(log_m)
+            log_s_k.append(log_s_k[step] + log_neg_a)
+        # Set mask equal to scope for last step
+        log_m_k.append(log_s_k[-1])
+        # Accumulate stats
+        stats.update({'colour': colour, 'delta': delta, 'seeds': seed_list})
         return log_m_k, log_s_k, stats

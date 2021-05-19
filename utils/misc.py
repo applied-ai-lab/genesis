@@ -13,6 +13,7 @@
 
 import sys
 import time
+import simplejson as json
 import datetime
 
 import torch
@@ -76,6 +77,25 @@ def loader_throughput(loader, num_batches=100, burn_in=5):
 def log_scalars(sdict, tag, step, writer):
     for key, val in sdict.items():
         writer.add_scalar(f'{tag}/{key}', val, step)
+
+
+def colour_seg_masks(masks, palette='15'):
+    # NOTE: Maps negative (ignore) labels to black
+    if masks.dim() == 3:
+        masks = masks.unsqueeze(1)
+    assert masks.dim() == 4
+    assert masks.shape[1] == 1
+    colours = json.load(open(f'utils/colour_palette{palette}.json'))
+    img_r = torch.zeros_like(masks)
+    img_g = torch.zeros_like(masks)
+    img_b = torch.zeros_like(masks)
+    for c_idx in range(masks.max().item() + 1):
+        c_map = masks == c_idx
+        if c_map.any():
+            img_r[c_map] = colours['palette'][c_idx][0]
+            img_g[c_map] = colours['palette'][c_idx][1]
+            img_b[c_map] = colours['palette'][c_idx][2]
+    return torch.cat([img_r, img_g, img_b], dim=1)
 
 
 def average_ari(log_m_k, instances, foreground_only=False):

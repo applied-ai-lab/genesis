@@ -33,7 +33,8 @@ import forge.experiment_tools as fet
 from forge.experiment_tools import fprint
 
 from utils.geco import GECO
-from utils.misc import average_ari, average_segcover, log_scalars
+from utils.misc import average_ari, average_segcover
+from utils.misc import log_scalars, colour_seg_masks
 from scripts.compute_fid import fid_from_model
 
 
@@ -54,8 +55,10 @@ def main_flags():
                         'Name of this job and name of results folder.')
     flags.DEFINE_integer('report_loss_every', 1000,
                          'Number of iterations between reporting minibatch loss.')
-    flags.DEFINE_integer('run_validation_every', 25000,
+    flags.DEFINE_integer('run_validation_every', 5000,
                          'How many equally spaced validation runs to do.')
+    flags.DEFINE_integer('log_images_every', 25000,
+                         'How often to log images to TensorBoard.')
     flags.DEFINE_integer('num_checkpoints', 4,
                          'How many equally spaced model checkpoints to save.')
     flags.DEFINE_boolean('resume', False, 'Tries to resume a job if True.')
@@ -184,6 +187,7 @@ def main():
                                 map_location=None if config.gpu else 'cpu')
         # Restore model
         model_state_dict = checkpoint['model_state_dict']
+        # Remove unnecessary items for backwards compatibility with older models
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_1', None)
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_2', None)
         model.load_state_dict(model_state_dict)
@@ -242,8 +246,8 @@ def main():
 
             # Main objective
             if config.geco:
-                loss = geco.loss(err, kl_l + kl_m)
                 beta = geco.beta
+                loss = geco.loss(err, kl_l + kl_m)
             else:
                 if config.beta_warmup:
                     # Increase beta linearly over 20% of training
@@ -328,7 +332,7 @@ def main():
                     save_model, optimiser,
                     beta, geco.err_ema if config.geco else None, iter_idx)
 
-            # Run validation and log images
+            # Run validation
             if (iter_idx % config.run_validation_every == 0 or
                     float(elbo) > ELBO_DIV):
                 # Weight and gradient histograms
@@ -338,14 +342,17 @@ def main():
                                              iter_idx)
                         writer.add_histogram(f'grads/{name}', param.grad,
                                              iter_idx)
-                # Visualise model outputs
-                visualise_outputs(model, train_batch, writer, 'train', iter_idx)
                 # Log validation metrics
                 fprint("Running validation...")
                 eval_model = model.module if config.multi_gpu else model
                 val_stats = evaluation(eval_model, val_loader, writer, config,
                                        iter_idx, N_eval=config.N_eval)
                 fprint(f"VALIDATON STATS: {val_stats}")
+            
+            # Visualise model outputs
+            if iter_idx % config.log_images_every == 0:
+                visualise_outputs(model, train_batch, writer, 'train', iter_idx)
+                fprint("Logged images to TensorBoard")
 
             # Increment counter
             iter_idx += 1
@@ -424,6 +431,22 @@ def visualise_outputs(model, vis_batch, writer, mode, iter_idx):
     # Input and recon
     writer.add_image(mode+'_input', make_grid(vis_batch['input'][:8]), iter_idx)
     writer.add_image(mode+'_recon', make_grid(output), iter_idx)
+    # Instance segmentations
+    if 'instances' in vis_batch:
+        grid = make_grid(colour_seg_masks(vis_batch['instances'][:8]))
+        writer.add_image(mode+'_instances_gt', grid, iter_idx)
+    # Segmentation predictions
+    for field in ['log_m_k', 'log_m_r_k']:
+        if field in stats:
+            log_masks = stats[field]
+        else:
+            continue
+        ins_seg = torch.argmax(torch.cat(log_masks, 1), 1, True)
+        grid = make_grid(colour_seg_masks(ins_seg))
+        if field == 'log_m_k':
+            writer.add_image(mode+'_instances', grid, iter_idx)
+        elif field == 'log_m_r_k':
+            writer.add_image(mode+'_instances_r', grid, iter_idx)
     # Decomposition
     for key in ['mx_r_k', 'x_r_k', 'log_m_k', 'log_m_r_k']:
         if key not in stats:
@@ -460,7 +483,7 @@ def evaluation(model, data_loader, writer, config, iter_idx,
     batch_size = data_loader.batch_size
 
     if iter_idx == 0 or config.debug:
-        num_batches = 1
+        num_batches = 5
         fprint(f"ITER 0 / DEBUG - eval on {num_batches} batches", True)
     elif N_eval is not None and N_eval <= len(data_loader)*batch_size:
         num_batches = int(N_eval // batch_size)
@@ -506,23 +529,32 @@ def evaluation(model, data_loader, writer, config, iter_idx,
             kl_l = losses.kl_l.mean(0)
         eval_stats['elbo'].append(losses.err.mean(0) + kl_m + kl_l)
 
-        # Track segmentation metrics metrics
-        if      ('instances' in batch and 'log_m_k' in stats and
-                 b_idx*batch_size < N_seg_metrics):
-            # ARI
-            new_ari, _ = average_ari(
-                stats.log_m_k, batch['instances'])
-            new_ari_fg, _ = average_ari(
-                stats.log_m_k, batch['instances'], True)
-            eval_stats['ari'].append(new_ari)
-            eval_stats['ari_fg'].append(new_ari_fg)
-            # Segmentation Covering
-            iseg = torch.argmax(torch.cat(stats.log_m_k, 1), 1, True)
-            msc, _ = average_segcover(batch['instances'], iseg)
-            msc_fg, _ = average_segcover(batch['instances'], iseg,
-                                         ignore_background=True)
-            eval_stats['msc'].append(msc)
-            eval_stats['msc_fg'].append(msc_fg)
+        # Track segmentation metrics
+        if 'instances' in batch and b_idx*batch_size < N_seg_metrics:
+            for mode in ['log_m_k', 'log_m_r_k']:
+                if mode in stats:
+                    log_masks = stats[mode]
+                else:
+                    continue
+                # ARI
+                new_ari, _ = average_ari(log_masks, batch['instances'])
+                new_ari_fg, _ = average_ari(log_masks, batch['instances'], True)
+                # Segmentation Covering
+                ins_seg = torch.argmax(torch.cat(log_masks, 1), 1, True)
+                msc, _ = average_segcover(batch['instances'], ins_seg)
+                msc_fg, _ = average_segcover(batch['instances'], ins_seg,
+                                             ignore_background=True)
+                # Track metrics
+                if mode == 'log_m_k':
+                    eval_stats['ari'].append(new_ari)
+                    eval_stats['ari_fg'].append(new_ari_fg)
+                    eval_stats['msc'].append(msc)
+                    eval_stats['msc_fg'].append(msc_fg)
+                elif mode == 'log_m_r_k':
+                    eval_stats['ari_r'].append(new_ari)
+                    eval_stats['ari_fg_r'].append(new_ari_fg)
+                    eval_stats['msc_r'].append(msc)
+                    eval_stats['msc_fg_r'].append(msc_fg)
 
     # Sum over batches
     for key, val in eval_stats.items():

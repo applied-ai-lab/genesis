@@ -26,7 +26,7 @@ import numpy as np
 from forge import flags
 
 from modules.unet import UNet
-import modules.seq_att as seq_att
+import modules.attention as attention
 from modules.component_vae import ComponentVAE
 from models.genesis_config import Genesis
 from utils import misc
@@ -55,8 +55,14 @@ class MONet(nn.Module):
         # - Attention Network
         if not hasattr(cfg, 'filter_start'):
             cfg['filter_start'] = 32
-        core = UNet(int(np.log2(cfg.img_size)-1), cfg.filter_start)
-        self.att_process = seq_att.SimpleSBP(core)
+        core = UNet(
+            num_blocks=int(np.log2(cfg.img_size)-1),
+            img_size=cfg.img_size,
+            filter_start=cfg.filter_start,
+            in_chnls=4,
+            out_chnls=1,
+            norm='in')
+        self.att_process = attention.SimpleSBP(core)
         # - Component VAE
         self.comp_vae = ComponentVAE(nout=4, cfg=cfg, act=nn.ReLU())
         self.comp_vae.pixel_bound = False
@@ -126,36 +132,40 @@ class MONet(nn.Module):
             _, _, _, _, comp_stats = self.forward(image_batch)
             return torch.cat(comp_stats.z_k, dim=1)
 
-    def get_mask_recon_stack(self, m_r_logits_k, prior_mode, log):
+    @staticmethod
+    def get_mask_recon_stack(m_r_logits_k, prior_mode, log):
         if prior_mode == 'softmax':
             if log:
                 return F.log_softmax(torch.stack(m_r_logits_k, dim=4), dim=4)
             return F.softmax(torch.stack(m_r_logits_k, dim=4), dim=4)
         elif prior_mode == 'scope':
             log_m_r_k = []
-            log_scope = torch.zeros_like(m_r_logits_k[0])
+            log_s = torch.zeros_like(m_r_logits_k[0])
             for step, logits in enumerate(m_r_logits_k):
-                if step == self.K_steps - 1:
-                    log_m_r_k.append(log_scope)
+                if step == len(m_r_logits_k) - 1:
+                    log_m_r_k.append(log_s)
                 else:
-                    log_m = F.logsigmoid(logits)
-                    log_neg_m = F.logsigmoid(-logits)
-                    log_m_r_k.append(log_scope + log_m)
-                    log_scope = log_scope +  log_neg_m
+                    log_a = F.logsigmoid(logits)
+                    log_neg_a = F.logsigmoid(-logits)
+                    log_m_r_k.append(log_s + log_a)
+                    log_s = log_s +  log_neg_a
             log_m_r_stack = torch.stack(log_m_r_k, dim=4)
             return log_m_r_stack if log else log_m_r_stack.exp()
         else:
             raise ValueError("No valid prior mode.")
 
-    def kl_m_loss(self, log_m_k, log_m_r_k):
+    @staticmethod
+    def kl_m_loss(log_m_k, log_m_r_k, debug=False):
+        if debug:
+            assert len(log_m_k) == len(log_m_r_k)
         batch_size = log_m_k[0].size(0)
         m_stack = torch.stack(log_m_k, dim=4).exp()
         m_r_stack = torch.stack(log_m_r_k, dim=4).exp()
         # Lower bound to 1e-5 to avoid infinities
         m_stack = torch.max(m_stack, torch.tensor(1e-5))
         m_r_stack = torch.max(m_r_stack, torch.tensor(1e-5))
-        q_m = Categorical(m_stack.view(-1, self.K_steps))
-        p_m = Categorical(m_r_stack.view(-1, self.K_steps))
+        q_m = Categorical(m_stack.view(-1, len(log_m_k)))
+        p_m = Categorical(m_r_stack.view(-1, len(log_m_k)))
         kl_m_ppc = kl_divergence(q_m, p_m).view(batch_size, -1)
         return kl_m_ppc.sum(dim=1)
 
