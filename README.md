@@ -171,7 +171,7 @@ Generation and segmentation metrics of the released model checkpoints are summar
 | GENESIS-V2 | ShapeStacks | 108.1 | 0.80 | 0.66 |
 | GENESIS-V2 | ObjectsRoom | 53.2 | 0.82 | 0.61 |
 
-Other than varying the number of object slots `K`, models are trained with the same default hyperparameters across datasets. Generation and segmentation performance can likely be improved by further tuning hyperparameters for each individual dataset, e.g., a smaller GECO reconstruction target might help to also achieve better segmentation performance on Multi-dSprites.
+Other than varying the number of object slots `K`, models are trained with the same default hyperparameters across datasets. Generation and segmentation performance can be improved by further tuning hyperparameters for each individual dataset. For example, [Dang-Nhu & Steger 2021](https://arxiv.org/pdf/2101.04041.pdf) achieve better segmentation performance on Multi-dSprites using smaller standard deviations for the conditional likelihood p(x|z) and a smaller GECO reconstruction target. The authors also achieve good results on CLEVR6 using this implementation with custom hyperparameters.
 
 **NOTE:** Results can vary between individual runs. It is recommended to perform multiple runs with different random seeds to obtain a sense for model performance.
 
