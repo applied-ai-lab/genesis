@@ -163,10 +163,10 @@ Scripts for visualising reconstructions/segmentations and samples are available 
 Checkpoints of pretrained models are available [here](https://drive.google.com/file/d/1wh0zFHMPmhFH6JAqyYQi2Trvdg-NTJxT/view?usp=sharing).
 
 Generation and segmentation metrics of the released model checkpoints are summarised in the following table:
-| Model | Dataset | FID | ARI-FG | MSC-FG |
+| Model | Dataset | FID &darr; | ARI-FG &uarr; | MSC-FG &uarr; |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
 | GENESIS | Multi-dSprites | 25.0 | 0.57 | 0.69 |
-| GENESIS | GQN | 79.4 | - | - |
+| GENESIS | GQN | 79.4 | no labels | no labels |
 | GENESIS | ShapeStacks | 235.4 | 0.71 | 0.64 |
 | GENESIS-V2 | ShapeStacks | 108.1 | 0.80 | 0.66 |
 | GENESIS-V2 | ObjectsRoom | 53.2 | 0.82 | 0.61 |
