@@ -141,13 +141,13 @@ TensorBoard logs are written to file with [TensorboardX](https://github.com/lanp
 
 ## Evaluation
 To compute the FID score for a trained model you can run, e.g.:
-'''shell
+```shell
 python scripts/compute_fid.py --data_config datasets/gqn_config.py --model_config models/genesis_config.py --model_dir checkpoints/MyModel/1 --model_file model.ckpt-FINAL
-'''
+```
 Similarly, you can compute the segmentation metrics with, e.g.:
-'''shell
+```shell
 python scripts/compute_seg_metrics.py --data_config datasets/gqn_config.py --model_config models/genesis_config.py --model_dir checkpoints/MyModel/1 --model_file model.ckpt-FINAL
-'''
+```
 
 ## Visualisation
 You can visualise your data with, e.g.:
@@ -159,17 +159,19 @@ python scripts/visualise_data.py --data_config datasets/multi_object_config.py -
 ```
 Scripts for visualising reconstructions/segmentations and samples are available at `scripts/visualise_reconstruction.py` and `scripts/visualise_generation.py`, respectively.
 
-## Pretrained models
-Models pretrained on the three datasets used in the ICLR paper are available [here](https://drive.google.com/file/d/1aFyAzMdscMe8_w_hbIz5A1Fb1gr8EBNG/view?usp=sharing).
+## Pretrained models & results
+Checkpoints of pretrained models are available [here](https://drive.google.com/file/d/1wh0zFHMPmhFH6JAqyYQi2Trvdg-NTJxT/view?usp=sharing).
 
-## Results
-
-Generation and segmentation metrics of the released model checkpoints are summarised in the following table with results from the ICLR paper included in parentheses:
-| Model | Dataset | FID | ARI | MSC |
+Generation and segmentation metrics of the released model checkpoints are summarised in the following table:
+| Model | Dataset | FID | ARI-FG | MSC-FG |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
-| GENESIS | Multi-dSprites | 25.0 (24.9) | - | - |
-| GENESIS | GQN | 79.4 (80.5) | - | - |
-| GENESIS | ShapeStacks | 235.4 | 0.57 (0.73+-0.03) | 0.72 (0.60+-0.09) |
+| GENESIS | Multi-dSprites | 25.0 | 0.57 | 0.69 |
+| GENESIS | GQN | 79.4 | - | - |
+| GENESIS | ShapeStacks | 235.4 | 0.71 | 0.64 |
+| GENESIS-V2 | ShapeStacks | 108.1 | 0.80 | 0.66 |
+| GENESIS-V2 | ObjectsRoom | 53.2 | 0.82 | 0.61 |
+
+Other than varying the number of object slots `K`, models are trained with the same default hyperparameters across datasets. Generation and segmentation performance can likely be improved by further tuning hyperparameters for each individual dataset, e.g., a smaller GECO reconstruction target might help to also achieve better segmentation performance on Multi-dSprites.
 
 **NOTE:** Results can vary between individual runs. It is recommended to perform multiple runs with different random seeds to obtain a sense for model performance.
 
@@ -185,7 +187,7 @@ Authors: Applied AI Lab, Oxford Robotics Institute, University of Oxford, https:
 No warranty, explicit or implicit, provided.
 
 ### Citation
-If you make use of this code in your research, we would appreciate if you considered citing the most appropriate of the three papers:
+If you make use of this code in your research, we would appreciate if you considered citing the paper that is most relevant to your work:
 ```
 @inproceedings{engelcke2020genesis,
   title={{GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations}},
