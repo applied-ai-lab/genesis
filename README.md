@@ -1,4 +1,4 @@
-# Genesis
+# Genesis and Genesis-V2
 
 This is the official PyTorch reference implementation of:
 > ["GENESIS: Generative Scene Inference and Sampling with Object-Centric Latent Representations"](https://arxiv.org/abs/1907.13052)  
