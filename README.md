@@ -163,13 +163,15 @@ Scripts for visualising reconstructions/segmentations and samples are available 
 Checkpoints of pretrained models are available [here](https://drive.google.com/drive/folders/1dp6trBGAFUeQ1V3h61Mlv0JeMZqc97sw?usp=sharing).
 
 Generation and segmentation metrics of the released model checkpoints are summarised in the following table:
-| Model | Dataset | FID &darr; | ARI-FG &uarr; | MSC-FG &uarr; |
-| ------------- | ------------- | ------------- | ------------- | ------------- |
-| GENESIS | Multi-dSprites | 25.0 | 0.57 | 0.69 |
-| GENESIS | GQN | 79.4 | no labels | no labels |
-| GENESIS | ShapeStacks | 235.4 | 0.71 | 0.64 |
-| GENESIS-V2 | ShapeStacks | 108.1 | 0.80 | 0.66 |
-| GENESIS-V2 | ObjectsRoom | 53.2 | 0.82 | 0.61 |
+| Model | Dataset | FID &darr; | ARI-FG &uarr; | MSC-FG &uarr; | ARI &uarr; | MSC &uarr; |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| GENESIS | Multi-dSprites | 25.0 | 0.57 | 0.69 | - | - |
+| GENESIS | GQN | 79.4 | no labels | no labels | no labels | no labels |
+| GENESIS | ShapeStacks | 235.4 | 0.71 | 0.64 | - | - |
+| GENESIS-V2 | ShapeStacks | 108.1 | 0.80 | 0.66 | - | - |
+| GENESIS-V2 | ObjectsRoom | 53.2 | 0.82 | 0.61 | - | - |
+| GENESIS-V2 | Sketchy | 212.7 | no labels | no labels | no labels | no labels |
+| GENESIS-V2 | APC | 232.2 | - | - | 0.55 | 0.65 |
 
 Other than varying the number of object slots `K`, models are trained with the same default hyperparameters across datasets. Generation and segmentation performance can be improved by further tuning hyperparameters for each individual dataset. For example, [Dang-Nhu & Steger 2021](https://arxiv.org/pdf/2101.04041.pdf) achieve better segmentation performance on Multi-dSprites using smaller standard deviations for the conditional likelihood p(x|z) and a smaller GECO reconstruction target. The authors also achieve good results on CLEVR6 using this implementation with custom hyperparameters.
 
