@@ -160,7 +160,7 @@ python scripts/visualise_data.py --data_config datasets/multi_object_config.py -
 Scripts for visualising reconstructions/segmentations and samples are available at `scripts/visualise_reconstruction.py` and `scripts/visualise_generation.py`, respectively.
 
 ## Pretrained models & results
-Checkpoints of pretrained models are available [here](https://drive.google.com/file/d/1wh0zFHMPmhFH6JAqyYQi2Trvdg-NTJxT/view?usp=sharing).
+Checkpoints of pretrained models are available [here](https://drive.google.com/drive/folders/1dp6trBGAFUeQ1V3h61Mlv0JeMZqc97sw?usp=sharing).
 
 Generation and segmentation metrics of the released model checkpoints are summarised in the following table:
 | Model | Dataset | FID &darr; | ARI-FG &uarr; | MSC-FG &uarr; |
