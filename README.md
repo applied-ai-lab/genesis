@@ -198,16 +198,16 @@ If you make use of this code in your research, we would appreciate if you consid
   year={2020}
 }
 @article{engelcke2020reconstruction,
-	title={{Reconstruction Bottlenecks in Object-Centric Generative Models}},
-	author={Engelcke, Martin and Parker Jones, Oiwi and Posner, Ingmar},
-	journal={ICML Workshop on Object-Oriented Learning},
-	year={2020}
+  title={{Reconstruction Bottlenecks in Object-Centric Generative Models}},
+  author={Engelcke, Martin and Parker Jones, Oiwi and Posner, Ingmar},
+  journal={ICML Workshop on Object-Oriented Learning},
+  year={2020}
 }
 @article{engelcke2021genesisv2,
-	title={{GENESIS-V2: Inferring Unordered Object Representations without Iterative Refinement}},
-	author={Engelcke, Martin and Parker Jones, Oiwi and Posner, Ingmar},
-	journal={arXiv preprint arXiv:2104.09958},
-	year={2021}
+  title={{GENESIS-V2: Inferring Unordered Object Representations without Iterative Refinement}},
+  author={Engelcke, Martin and Parker Jones, Oiwi and Posner, Ingmar},
+  journal={arXiv preprint arXiv:2104.09958},
+  year={2021}
 }
 ```
 
