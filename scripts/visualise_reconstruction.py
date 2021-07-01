@@ -94,13 +94,16 @@ def main():
         
         # Put K reconstruction steps into separate subfigures
         x_k = stats['x_r_k']
-        log_m_k = stats['log_m_k']
-        mx_k = [x*m.exp() for x, m in zip(x_k, log_m_k)]
+        if 'genesisv2' not in config.model_config:
+            log_masks = stats['log_m_k']
+        else:
+            log_masks = stats['log_m_r_k']
+        mx_k = [x*m.exp() for x, m in zip(x_k, log_masks)]
         log_s_k = stats['log_s_k'] if 'log_s_k' in stats else None
         for step in range(pretrained_flags.K_steps):
             mx_step = mx_k[step]
             x_step = x_k[step]
-            m_step = log_m_k[step].exp()
+            m_step = log_masks[step].exp()
             if log_s_k:
                 s_step = log_s_k[step].exp()
 
