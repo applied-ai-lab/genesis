@@ -60,6 +60,15 @@ def main():
     torch.backends.cudnn.benchmark = False
 
     #  Load model
+    if pretrained_flags.K_steps < 0 and 'multi_object' in config.data_config:
+        if pretrained_flags.dataset == 'multi_dprites':
+            pretrained_flags.K_steps = 5
+        elif pretrained_flags.dataset == 'objects_room':
+            pretrained_flags.K_steps = 7
+        elif pretrained_flags.dataset == 'clevr':
+            pretrained_flags.K_steps = 11
+        elif pretrained_flags.dataset == 'tetrominoes':
+            pretrained_flags.K_steps = 4
     model = fet.load(config.model_config, pretrained_flags)
     model_path = osp.join(config.model_dir, config.model_file)
     fprint(f"Restoring model from {model_path}")

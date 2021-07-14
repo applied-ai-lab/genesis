@@ -62,6 +62,8 @@ def main():
     # Load data
     config.batch_size = 1
     _, _, test_loader = fet.load(config.data_config, config)
+    if pretrained_flags.K_steps < 0 and 'multi_object' in config.data_config:
+        pretrained_flags.K_steps = config.K_steps
 
     # Load model
     model = fet.load(config.model_config, pretrained_flags)
