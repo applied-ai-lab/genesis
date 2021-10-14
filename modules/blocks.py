@@ -175,4 +175,4 @@ class SemiConv(nn.Module):
     def forward(self, x):
         out = self.gate(self.conv(x))
         delta = out[:, -2:, :, :]
-        return out + self.uv, delta
+        return out + self.uv.to(out.device), delta
