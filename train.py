@@ -190,7 +190,8 @@ def main():
         # Remove unnecessary items for backwards compatibility with older models
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_1', None)
         model_state_dict.pop('comp_vae.decoder_module.seq.0.pixel_coords.g_2', None)
-        model.load_state_dict(model_state_dict)
+        load_model = model.module if config.gpu and config.multi_gpu else model
+        load_model.load_state_dict(model_state_dict)
         # Restore optimiser
         optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
         # Optional: Restore GECO
@@ -351,7 +352,8 @@ def main():
             
             # Visualise model outputs
             if iter_idx % config.log_images_every == 0:
-                visualise_outputs(model, train_batch, writer, 'train', iter_idx)
+                vis_model = model.module if config.gpu and config.multi_gpu else model
+                visualise_outputs(vis_model, train_batch, writer, 'train', iter_idx)
                 fprint("Logged images to TensorBoard")
 
             # Increment counter

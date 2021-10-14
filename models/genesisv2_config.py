@@ -58,6 +58,7 @@ class GenesisV2(nn.Module):
         self.detach_mr_in_klm = cfg.detach_mr_in_klm
         self.dynamic_K = cfg.dynamic_K
         self.debug = cfg.debug
+        self.multi_gpu = cfg.multi_gpu
         # Encoder
         self.encoder = UNet(
             num_blocks=int(np.log2(cfg.img_size)-1),
@@ -193,6 +194,11 @@ class GenesisV2(nn.Module):
                 assert len(log_m_r_k) == self.K_steps
             misc.check_log_masks(log_m_k)
             misc.check_log_masks(log_m_r_k)
+
+        if self.multi_gpu:
+            # q_z_k is a torch.distribution which doesn't work with the
+            # gathering used by DataParallel.
+            del comp_stats['q_z_k']
 
         return recon, losses, stats, att_stats, comp_stats
 
