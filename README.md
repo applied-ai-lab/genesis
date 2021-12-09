@@ -11,7 +11,7 @@ This is the official PyTorch reference implementation of:
 
 > ["GENESIS-V2: Inferring Unordered Object Representations without Iterative Refinement"](https://arxiv.org/abs/2104.09958v2)  
 > Martin Engelcke, Oiwi Parker Jones, and Ingmar Posner  
-> arXiv preprint arXiv:2104.09958, 2021
+> Advances in Neural Information Processing Systems (NeurIPS), 2021
 
 As part of these works, the repository also includes:
 * a [re-implementation of MONet](https://github.com/applied-ai-lab/genesis/blob/master/models/monet_config.py) from ["MONet: Unsupervised Scene Decomposition and Representation"](https://arxiv.org/abs/1901.11390) by Burgess et al.;
