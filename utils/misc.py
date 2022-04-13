@@ -159,11 +159,10 @@ def dataset_ari(model, data_loader, num_images=300):
     return avg_ari, avg_ari_fg, ari_list, ari_fg_list
 
 
-def iou_binary(mask_A, mask_B, debug=False):
-    if debug:
-        assert mask_A.shape == mask_B.shape
-        assert mask_A.dtype == torch.bool
-        assert mask_B.dtype == torch.bool
+def iou_binary(mask_A, mask_B):
+    assert mask_A.shape == mask_B.shape
+    assert mask_A.dtype == torch.bool
+    assert mask_B.dtype == torch.bool
     intersection = (mask_A * mask_B).sum((1, 2, 3))
     union = (mask_A + mask_B).sum((1, 2, 3))
     # Return -100 if union is zero, else return IOU
